@@ -289,7 +289,7 @@ def main():
     logger.info("Starting Traditional ML Models Training...")
     
     # Load dataset
-    csv_dir = "../datasets/converted_csv"
+    csv_dir = "../../datasets/converted_csv"
     X_train_raw, y_train, X_val_raw, y_val = load_dataset(csv_dir)
     
     # Extract features
@@ -324,7 +324,7 @@ def main():
     best_result = max(results, key=lambda x: x['accuracy'])
     logger.info(f"\nBest Model: {best_result['name']} with {best_result['accuracy']*100:.2f}% accuracy")
     
-    # Create trained_model/ml_models directory
+    # Create trained_models/ml_models directory
     model_dir = Path("trained_model") / "ml_models"
     model_dir.mkdir(parents=True, exist_ok=True)
     

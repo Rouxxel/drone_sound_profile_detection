@@ -297,7 +297,7 @@ def main():
     logger.info("Starting Robust CNN training...")
     
     # Load dataset
-    csv_dir = "../datasets/converted_csv"
+    csv_dir = "../../datasets/converted_csv"
     X_train_raw, y_train, X_val_raw, y_val = load_dataset(csv_dir)
     
     # Preprocess
@@ -314,7 +314,7 @@ def main():
     # Build model
     model = build_robust_cnn(input_shape=X_train.shape[1:], num_classes=3)
     
-    # Create trained_model/robust_cnn directory
+    # Create trained_models/robust_cnn directory
     model_dir = Path("trained_model") / "robust_cnn"
     model_dir.mkdir(parents=True, exist_ok=True)
     

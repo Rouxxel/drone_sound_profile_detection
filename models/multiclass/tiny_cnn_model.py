@@ -180,7 +180,7 @@ def plot_training(history):
 
 def main():
     logger.info("Starting Tiny CNN training...")
-    csv_dir = "../datasets/converted_csv"
+    csv_dir = "../../datasets/converted_csv"
     X_train_raw, y_train, X_val_raw, y_val = load_dataset(csv_dir)
     X_train = preprocess_data(X_train_raw)
     X_val = preprocess_data(X_val_raw)
@@ -196,7 +196,7 @@ def main():
                         batch_size=8,
                         verbose=1).history
 
-    # Create trained_model/tiny_cnn directory
+    # Create trained_models/tiny_cnn directory
     model_dir = Path("trained_model") / "tiny_cnn"
     model_dir.mkdir(parents=True, exist_ok=True)
     
