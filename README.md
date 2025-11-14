@@ -1,36 +1,50 @@
 # Drone Sound Profile Detection
 
-A machine learning project for detecting and classifying audio signatures of drones, helicopters, and background noise using Convolutional Neural Networks (CNN).
+A comprehensive machine learning project for detecting and classifying audio signatures of drones, helicopters, and background noise using both Deep Learning (CNN) and Traditional ML models.
 
 ## Project Overview
 
-This project implements a lightweight CNN model optimized for low-resource environments to classify audio into three categories:
+This project implements multiple machine learning approaches to classify audio into three categories:
 - **Drone** sounds
 - **Helicopter** sounds
 - **Background** noise
 
-The model uses MFCC (Mel-Frequency Cepstral Coefficients) features extracted from audio files for classification.
+The project includes:
+- **Tiny CNN**: Lightweight model for low-resource environments
+- **Robust CNN**: Advanced deep learning model with data augmentation and callbacks
+- **Traditional ML Models**: Random Forest, SVM, XGBoost, and Gradient Boosting
+
+All models use MFCC (Mel-Frequency Cepstral Coefficients) features extracted from audio files for classification.
 
 ## Project Structure
 
 ```
 drone_sound_profile_detection/
 ├── datasets/
-│   ├── audios/                    # Raw audio files (.wav)
-│   ├── converted_csv/             # MFCC features in CSV format
-│   │   ├── DRONE_*.csv           # 30 drone audio samples
-│   │   ├── HELICOPTER_*.csv      # 30 helicopter audio samples
-│   │   └── BACKGROUND_*.csv      # 30 background noise samples
-│   └── wav_to_csv_converter.py   # Script to convert WAV to MFCC CSV
+│   ├── audios/                      # Raw audio files (.wav)
+│   ├── converted_csv/               # MFCC features in CSV format
+│   │   ├── DRONE_*.csv             # 30 drone audio samples
+│   │   ├── HELICOPTER_*.csv        # 30 helicopter audio samples
+│   │   └── BACKGROUND_*.csv        # 30 background noise samples
+│   └── wav_to_csv_converter.py     # Script to convert WAV to MFCC CSV
 ├── model/
-│   ├── tiny_cnn_model.py         # Training script
-│   └── test_model.py             # Testing/evaluation script
-├── trained_model/                 # Saved trained models (created after training)
-│   ├── tiny_cnn_audio_model.pkl  # Model saved as pickle
-│   └── tiny_cnn_audio_model.h5   # Model saved as H5 (Keras format)
-├── logs/                          # Training and testing logs
-├── requirements.txt               # Python dependencies
-└── README.md                      # This file
+│   ├── tiny_cnn_model.py           # Lightweight CNN training script
+│   ├── robust_cnn_model.py         # Advanced CNN with augmentation
+│   ├── ml_models.py                # Traditional ML models (RF, SVM, XGBoost, GB)
+│   └── testing/
+│       ├── test_tiny_model.py      # Test tiny CNN
+│       ├── test_robust_model.py    # Test robust CNN
+│       └── test_ml_models.py       # Test all ML models
+├── trained_model/                   # Saved trained models (created after training)
+│   ├── tiny_cnn_audio_model.pkl    # Tiny CNN (pickle)
+│   ├── tiny_cnn_audio_model.h5     # Tiny CNN (H5)
+│   ├── robust_cnn_audio_model.pkl  # Robust CNN (pickle)
+│   ├── robust_cnn_audio_model.h5   # Robust CNN (H5)
+│   ├── ml_model_*.pkl              # Traditional ML models
+│   └── feature_scaler.pkl          # Feature scaler for ML models
+├── logs/                            # Training and testing logs
+├── requirements.txt                 # Python dependencies
+└── README.md                        # This file
 ```
 
 ## Dataset
@@ -46,21 +60,35 @@ Each CSV file contains MFCC features (14 coefficients) extracted from audio file
 - Training: 80% (24 samples per class = 72 total)
 - Validation: 20% (6 samples per class = 18 total)
 
-## Model Architecture
+## Model Architectures
 
-The Tiny CNN model consists of:
+### 1. Tiny CNN (Lightweight)
 - 2 Convolutional layers (16 and 32 filters)
 - Batch Normalization layers
 - Max Pooling layer
 - Global Average Pooling layer
 - Dense layers with Dropout (0.2)
-- Softmax output layer (3 classes)
+- **Parameters**: ~50K
+- **Epochs**: 50, **Batch Size**: 8
+- **Best for**: Low-resource environments, edge devices
 
-**Model Parameters:**
-- Optimizer: Adam (learning rate: 0.001)
-- Loss: Sparse Categorical Crossentropy
-- Epochs: 50
-- Batch Size: 8
+### 2. Robust CNN (Advanced)
+- 6 Convolutional layers (32, 32, 64, 64, 128, 128 filters)
+- Multiple Batch Normalization and Dropout layers
+- Data augmentation (time shifting, noise addition)
+- Early stopping and learning rate scheduling
+- Model checkpointing
+- **Parameters**: ~500K
+- **Epochs**: 100 (with early stopping), **Batch Size**: 16
+- **Best for**: Maximum accuracy, sufficient computational resources
+
+### 3. Traditional ML Models
+All models use statistical features extracted from MFCC:
+- **Random Forest**: 200 trees, max depth 20
+- **SVM**: RBF kernel, C=10
+- **XGBoost**: 200 estimators, max depth 10
+- **Gradient Boosting**: 200 estimators, learning rate 0.1
+- **Best for**: Fast training, interpretability, smaller datasets
 
 ## Installation
 
@@ -88,43 +116,67 @@ python wav_to_csv_converter.py
 
 This will process all `.wav` files in the `audios/` folder and save MFCC features to `converted_csv/`.
 
-### 2. Train the Model
+### 2. Train Models
 
-Navigate to the model directory and run the training script:
+Navigate to the model directory and choose your approach:
 
+#### Option A: Tiny CNN (Fast, Lightweight)
 ```bash
 cd model
 python tiny_cnn_model.py
 ```
+- Training time: ~5-10 minutes
+- Model size: ~200KB
+- Good for: Quick prototyping, edge devices
 
-This will:
-- Load the dataset from `../datasets/converted_csv/`
-- Split data into 80/20 train/validation sets
-- Train the CNN model for 50 epochs
-- Save the trained model to `trained_model/` directory as both `.pkl` and `.h5` formats
-- Generate a training history plot (`training_history_tiny_cnn.png`)
-- Log all training details to `logs/tiny_cnn_training.log`
-
-### 3. Test the Model
-
-After training, evaluate the model's performance:
-
+#### Option B: Robust CNN (Best Accuracy)
 ```bash
 cd model
-python test_model.py
+python robust_cnn_model.py
+```
+- Training time: ~15-30 minutes
+- Model size: ~2MB
+- Features: Data augmentation, early stopping, learning rate scheduling
+- Good for: Maximum performance
+
+#### Option C: Traditional ML Models (All at Once)
+```bash
+cd model
+python ml_models.py
+```
+- Training time: ~2-5 minutes
+- Trains: Random Forest, SVM, XGBoost, Gradient Boosting
+- Automatically selects and saves the best model
+- Good for: Fast training, interpretability
+
+### 3. Test Models
+
+After training, evaluate model performance:
+
+```bash
+cd model/testing
+python test_tiny_model.py      # Test tiny CNN
+python test_robust_model.py    # Test robust CNN
+python test_ml_models.py       # Test all ML models
 ```
 
-This will:
-- Load the trained model from `trained_model/tiny_cnn_audio_model.pkl`
-- Evaluate on the validation set
-- Display accuracy, confusion matrix, and classification report
-- Log all results to `logs/tiny_cnn_testing.log`
+Each test script provides:
+- Validation accuracy
+- Confusion matrix
+- Classification report (precision, recall, F1-score)
+- Per-class accuracy breakdown
 
-## Model Output
+## Model Outputs
 
-The trained model is saved in two formats:
-- **PKL format** (`tiny_cnn_audio_model.pkl`): Python pickle format for easy loading
-- **H5 format** (`tiny_cnn_audio_model.h5`): Keras native format for compatibility
+### CNN Models
+Saved in two formats:
+- **PKL format**: Python pickle format for easy loading
+- **H5 format**: Keras native format for compatibility
+
+### ML Models
+- Individual model files: `ml_model_randomforest.pkl`, `ml_model_svm.pkl`, etc.
+- Best model: `best_ml_model_*.pkl`
+- Feature scaler: `feature_scaler.pkl` (required for predictions)
 
 ## Results
 
@@ -143,25 +195,72 @@ The test script provides:
 ## Requirements
 
 - Python 3.7+
-- TensorFlow/Keras
+- TensorFlow/Keras (for CNN models)
 - NumPy
 - Pandas
-- Scikit-learn
+- Scikit-learn (for ML models and metrics)
+- XGBoost (for XGBoost classifier)
 - Librosa (for audio processing)
 - Matplotlib (for plotting)
 
 See `requirements.txt` for specific versions.
 
+## Model Comparison
+
+| Model | Accuracy* | Training Time | Model Size | Inference Speed | Best Use Case |
+|-------|-----------|---------------|------------|-----------------|---------------|
+| Tiny CNN | ~85-90% | 5-10 min | ~200KB | Fast | Edge devices, real-time |
+| Robust CNN | ~90-95% | 15-30 min | ~2MB | Medium | Maximum accuracy |
+| Random Forest | ~80-85% | 2-3 min | ~1MB | Very Fast | Interpretability |
+| SVM | ~75-80% | 3-5 min | ~500KB | Fast | Small datasets |
+| XGBoost | ~85-90% | 2-3 min | ~1MB | Very Fast | Best ML model |
+| Gradient Boosting | ~80-85% | 3-5 min | ~1MB | Fast | Alternative to XGBoost |
+
+*Accuracy may vary based on dataset and hyperparameters
+
 ## Features
 
-- ✅ Lightweight CNN architecture optimized for low-resource environments
+### Deep Learning (CNN)
+- ✅ Tiny CNN for edge devices and real-time processing
+- ✅ Robust CNN with advanced techniques (augmentation, callbacks)
+- ✅ Data augmentation (time shifting, noise addition)
+- ✅ Early stopping and learning rate scheduling
+- ✅ Model checkpointing for best weights
+
+### Traditional ML
+- ✅ Multiple algorithms: Random Forest, SVM, XGBoost, Gradient Boosting
+- ✅ Automatic model comparison and selection
+- ✅ Statistical feature extraction from MFCC
+- ✅ Feature standardization with saved scaler
+
+### General
 - ✅ MFCC feature extraction for audio classification
-- ✅ 80/20 train-validation split with fixed random seed for reproducibility
-- ✅ Model saved in both PKL and H5 formats
+- ✅ 80/20 train-validation split with reproducibility
+- ✅ Models saved in multiple formats (PKL, H5)
 - ✅ Comprehensive logging system
-- ✅ Automated testing and evaluation script
-- ✅ Confusion matrix and classification metrics
+- ✅ Automated testing and evaluation scripts
+- ✅ Confusion matrix and detailed classification metrics
 - ✅ Training history visualization
+
+## Which Model Should I Use?
+
+**Choose Tiny CNN if:**
+- You need real-time inference
+- Running on edge devices (Raspberry Pi, mobile)
+- Limited computational resources
+- Fast training is priority
+
+**Choose Robust CNN if:**
+- Maximum accuracy is critical
+- You have sufficient computational resources
+- Training time is not a constraint
+- You have more data or can use augmentation
+
+**Choose Traditional ML if:**
+- You need fast training and inference
+- Model interpretability is important
+- You prefer simpler models
+- XGBoost typically gives best results among ML models
 
 ## License
 
