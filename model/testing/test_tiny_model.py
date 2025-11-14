@@ -140,7 +140,7 @@ def main():
     logger.info("Model loaded successfully")
     
     # Load and preprocess the dataset
-    csv_dir = "../datasets/converted_csv"
+    csv_dir = "../../datasets/converted_csv"
     X_train_raw, y_train, X_val_raw, y_val, class_names = load_dataset(csv_dir)
     
     # Preprocess validation data
