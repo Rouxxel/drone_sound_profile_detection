@@ -36,12 +36,20 @@ drone_sound_profile_detection/
 │       ├── test_robust_model.py    # Test robust CNN
 │       └── test_ml_models.py       # Test all ML models
 ├── trained_model/                   # Saved trained models (created after training)
-│   ├── tiny_cnn_audio_model.pkl    # Tiny CNN (pickle)
-│   ├── tiny_cnn_audio_model.h5     # Tiny CNN (H5)
-│   ├── robust_cnn_audio_model.pkl  # Robust CNN (pickle)
-│   ├── robust_cnn_audio_model.h5   # Robust CNN (H5)
-│   ├── ml_model_*.pkl              # Traditional ML models
-│   └── feature_scaler.pkl          # Feature scaler for ML models
+│   ├── tiny_cnn/                   # Tiny CNN models
+│   │   ├── tiny_cnn_audio_model.pkl
+│   │   └── tiny_cnn_audio_model.h5
+│   ├── robust_cnn/                 # Robust CNN models
+│   │   ├── robust_cnn_audio_model.pkl
+│   │   ├── robust_cnn_audio_model.h5
+│   │   └── best_model.keras        # Best checkpoint
+│   └── ml_models/                  # Traditional ML models
+│       ├── ml_model_randomforest.pkl
+│       ├── ml_model_svm.pkl
+│       ├── ml_model_xgboost.pkl
+│       ├── ml_model_gradientboosting.pkl
+│       ├── best_ml_model_*.pkl
+│       └── feature_scaler.pkl
 ├── logs/                            # Training and testing logs
 ├── requirements.txt                 # Python dependencies
 └── README.md                        # This file
@@ -169,9 +177,10 @@ Each test script provides:
 ## Model Outputs
 
 ### CNN Models
-Saved in two formats:
+Saved in multiple formats:
 - **PKL format**: Python pickle format for easy loading
-- **H5 format**: Keras native format for compatibility
+- **H5 format**: Keras format for compatibility
+- **KERAS format**: Best model checkpoint (Robust CNN only)
 
 ### ML Models
 - Individual model files: `ml_model_randomforest.pkl`, `ml_model_svm.pkl`, etc.
@@ -191,6 +200,39 @@ The test script provides:
 - Confusion matrix
 - Per-class precision, recall, and F1-score
 - Per-class accuracy breakdown
+
+Actual Tested models
+# Drone Sound Profile Detection: Model Comparison
+
+| Model               | Validation Accuracy | Background Accuracy | Helicopter Accuracy | Drone Accuracy | Notes / Observations |
+|--------------------|------------------|------------------|------------------|---------------|--------------------|
+| **SVM**             | 94.44%           | 100%             | 100%             | 83.33%        | Best overall model. Strong per-class performance even with small dataset. |
+| **RandomForest**    | 88.89%           | 83.33%           | 100%             | 83.33%        | Performs well, slightly worse than SVM. Consistent per-class accuracy. |
+| **XGBoost**         | 88.89%           | 83.33%           | 100%             | 83.33%        | Similar to RandomForest; good for small datasets, but slightly behind SVM. |
+| **GradientBoosting**| 83.33%           | 83.33%           | 83.33%           | 83.33%        | Lower overall accuracy. Per-class accuracy is balanced but less precise. |
+| **Robust CNN v1**   | 38.89%           | 100%             | 16.67%           | 0%            | Severely biased toward Background class. Too few samples to learn features effectively. |
+| **Robust CNN v2**   | 55.56%           | 16.67%           | 66.67%           | 83.33%        | Improvement over v1, but still poor for Background class. Small dataset limits CNN performance. |
+
+---
+
+### **Explanation Based on Dataset**
+
+- **Dataset Size**: 30 files per class, 10 seconds each → 90 audio samples total (15 minutes).  
+- **Traditional ML Models**:
+  - Work very well on small datasets.
+  - SVM is the top performer due to its robustness with limited data and high-dimensional features (e.g., MFCCs or spectral features).
+  - RandomForest and XGBoost are also solid; GradientBoosting slightly less accurate.
+- **Robust CNN Models**:
+  - Struggle significantly with small data.
+  - CNN v1 overfits to the Background class; cannot generalize to Drone or Helicopter sounds.
+  - CNN v2 improves slightly but still cannot match traditional ML models.
+- **Key Insight**:
+  - For your current dataset, **traditional ML models are far more reliable than CNNs**.  
+  - CNNs require either more data, extensive augmentation, or transfer learning to perform better.
+
+---
+
+**Recommendation:** Stick with SVM or other traditional ML models for now. If you want to use CNNs, consider augmenting your dataset or using pretrained audio CNNs (transfer learning) to compensate for the small dataset.
 
 ## Requirements
 

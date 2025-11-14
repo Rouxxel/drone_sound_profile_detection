@@ -38,8 +38,6 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 # Logging Setup
 # -------------------------------------------------------------------------
 
-
-
 class CustomFormatter(logging.Formatter):
     def formatTime(self, record, datefmt=None):
         ct = self.converter(record.created)
@@ -58,7 +56,7 @@ def setup_logging():
     logger = logging.getLogger("tiny_cnn_logger")
     logger.setLevel(logging.INFO)
 
-    handler = logging.FileHandler(log_path, mode='w')
+    handler = logging.FileHandler(log_path, mode='w', encoding='utf-8')
     handler.setFormatter(CustomFormatter("%(asctime)s | %(levelname)s | %(message)s"))
 
     # Remove old handlers
@@ -100,7 +98,7 @@ def load_dataset(csv_dir: str) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.n
             continue
         mfcc = pd.read_csv(file).values.astype(np.float32)
         data_by_class[label].append(mfcc)
-        logger.info(f"Loaded {file.name} → class {label}")
+        logger.info(f"Loaded {file.name} -> class {label}")
 
     X_train, y_train, X_val, y_val = [], [], [], []
     for label, samples in data_by_class.items():
@@ -139,7 +137,8 @@ def preprocess_data(X: np.ndarray) -> np.ndarray:
 def build_tiny_cnn(input_shape: Tuple[int, int, int], num_classes: int = 3) -> models.Sequential:
     logger.info("Building Tiny CNN model...")
     model = models.Sequential([
-        layers.Conv2D(16, (3,3), activation='relu', padding='same', input_shape=input_shape),
+        layers.Input(shape=input_shape),
+        layers.Conv2D(16, (3,3), activation='relu', padding='same'),
         layers.BatchNormalization(),
         layers.MaxPooling2D((2,2)),
         layers.Conv2D(32, (3,3), activation='relu'),
@@ -172,7 +171,7 @@ def plot_training(history):
     plt.legend()
     plt.title("Loss")
     plt.tight_layout()
-    plt.savefig("trained_model/training_history_tiny_cnn.png")
+    plt.savefig("trained_model/tiny_cnn/training_history_tiny_cnn.png")
     logger.info("Training plot saved to training_history_tiny_cnn.png")
 
 # -------------------------------------------------------------------------
@@ -197,9 +196,9 @@ def main():
                         batch_size=8,
                         verbose=1).history
 
-    # Create trained_model directory if it doesn't exist
-    model_dir = Path("trained_model")
-    model_dir.mkdir(exist_ok=True)
+    # Create trained_model/tiny_cnn directory
+    model_dir = Path("trained_model") / "tiny_cnn"
+    model_dir.mkdir(parents=True, exist_ok=True)
     
     # Save model as pickle
     model_path = model_dir / "tiny_cnn_audio_model.pkl"

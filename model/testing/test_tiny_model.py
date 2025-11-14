@@ -41,7 +41,7 @@ def setup_logging():
     logger = logging.getLogger("tiny_cnn_test_logger")
     logger.setLevel(logging.INFO)
 
-    handler = logging.FileHandler(log_path, mode='w')
+    handler = logging.FileHandler(log_path, mode='w', encoding='utf-8')
     handler.setFormatter(CustomFormatter("%(asctime)s | %(levelname)s | %(message)s"))
 
     # Remove old handlers
@@ -128,7 +128,7 @@ def main():
     logger.info("Starting Tiny CNN model testing...")
     
     # Load the trained model
-    model_path = Path("trained_model/tiny_cnn_audio_model.pkl")
+    model_path = Path("../trained_model/tiny_cnn/tiny_cnn_audio_model.pkl")
     if not model_path.exists():
         logger.error(f"Model file not found: {model_path}")
         logger.error("Please train the model first by running tiny_cnn_model.py")

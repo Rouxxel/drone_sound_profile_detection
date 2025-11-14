@@ -40,7 +40,7 @@ def setup_logging():
     logger = logging.getLogger("ml_test_logger")
     logger.setLevel(logging.INFO)
 
-    handler = logging.FileHandler(log_path, mode='w')
+    handler = logging.FileHandler(log_path, mode='w', encoding='utf-8')
     handler.setFormatter(CustomFormatter("%(asctime)s | %(levelname)s | %(message)s"))
 
     if logger.hasHandlers():
@@ -111,6 +111,9 @@ def load_dataset(csv_dir: str):
 
 def extract_statistical_features(mfcc: np.ndarray) -> np.ndarray:
     """Extract statistical features from MFCC"""
+    # Ensure mfcc is a proper numpy array with float dtype
+    mfcc = np.asarray(mfcc, dtype=np.float32)
+    
     features = []
     
     # Mean, std, min, max for each coefficient
@@ -133,7 +136,7 @@ def extract_statistical_features(mfcc: np.ndarray) -> np.ndarray:
         features.extend(np.zeros(mfcc.shape[1]))
         features.extend(np.zeros(mfcc.shape[1]))
     
-    return np.array(features)
+    return np.array(features, dtype=np.float32)
 
 def prepare_ml_features(X: np.ndarray) -> np.ndarray:
     """Convert MFCC arrays to feature vectors for ML models"""
@@ -194,7 +197,7 @@ def main():
     logger.info("Starting ML Models Testing...")
     
     # Check for trained models
-    model_dir = Path("trained_model")
+    model_dir = Path("../trained_model/ml_models")
     if not model_dir.exists():
         logger.error(f"Model directory not found: {model_dir}")
         logger.error("Please train the models first by running ml_models.py")

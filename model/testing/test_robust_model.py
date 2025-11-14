@@ -32,7 +32,7 @@ def setup_logging():
     logger = logging.getLogger("robust_cnn_test_logger")
     logger.setLevel(logging.INFO)
 
-    handler = logging.FileHandler(log_path, mode='w')
+    handler = logging.FileHandler(log_path, mode='w', encoding='utf-8')
     handler.setFormatter(CustomFormatter("%(asctime)s | %(levelname)s | %(message)s"))
 
     if logger.hasHandlers():
@@ -104,7 +104,7 @@ def preprocess_data(X: np.ndarray) -> np.ndarray:
 def main():
     logger.info("Starting Robust CNN model testing...")
     
-    model_path = Path("trained_model/robust_cnn_audio_model.pkl")
+    model_path = Path("../trained_model/robust_cnn/robust_cnn_audio_model.pkl")
     if not model_path.exists():
         logger.error(f"Model file not found: {model_path}")
         logger.error("Please train the model first by running robust_cnn_model.py")

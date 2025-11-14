@@ -51,7 +51,7 @@ def setup_logging():
     logger = logging.getLogger("robust_cnn_logger")
     logger.setLevel(logging.INFO)
 
-    handler = logging.FileHandler(log_path, mode='w')
+    handler = logging.FileHandler(log_path, mode='w', encoding='utf-8')
     handler.setFormatter(CustomFormatter("%(asctime)s | %(levelname)s | %(message)s"))
 
     if logger.hasHandlers():
@@ -92,7 +92,7 @@ def load_dataset(csv_dir: str) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.n
             continue
         mfcc = pd.read_csv(file).values.astype(np.float32)
         data_by_class[label].append(mfcc)
-        logger.info(f"Loaded {file.name} → class {label}")
+        logger.info(f"Loaded {file.name} -> class {label}")
 
     X_train, y_train, X_val, y_val = [], [], [], []
     for label, samples in data_by_class.items():
@@ -152,7 +152,7 @@ def augment_data(X: np.ndarray, y: np.ndarray, augmentation_factor: int = 2) -> 
             X_aug.append(sample)
             y_aug.append(y[i])
     
-    logger.info(f"Data augmented: {len(X)} → {len(X_aug)} samples")
+    logger.info(f"Data augmented: {len(X)} -> {len(X_aug)} samples")
     return np.array(X_aug), np.array(y_aug)
 
 # -------------------------------------------------------------------------
@@ -162,8 +162,11 @@ def augment_data(X: np.ndarray, y: np.ndarray, augmentation_factor: int = 2) -> 
 def build_robust_cnn(input_shape: Tuple[int, int, int], num_classes: int = 3) -> models.Sequential:
     logger.info("Building Robust CNN model...")
     model = models.Sequential([
+        # Input layer
+        layers.Input(shape=input_shape),
+        
         # First Conv Block
-        layers.Conv2D(32, (3,3), activation='relu', padding='same', input_shape=input_shape),
+        layers.Conv2D(32, (3,3), activation='relu', padding='same'),
         layers.BatchNormalization(),
         layers.Conv2D(32, (3,3), activation='relu', padding='same'),
         layers.BatchNormalization(),
@@ -231,7 +234,7 @@ def get_callbacks(model_dir: Path):
     
     # Model checkpoint
     checkpoint = callbacks.ModelCheckpoint(
-        filepath=str(model_dir / 'best_model.h5'),
+        filepath=str(model_dir / 'best_model.keras'),
         monitor='val_accuracy',
         save_best_only=True,
         verbose=1
@@ -243,7 +246,7 @@ def get_callbacks(model_dir: Path):
 # Plotting Function
 # -------------------------------------------------------------------------
 
-def plot_training(history, save_path: str = "training_history_robust_cnn.png"):
+def plot_training(history, save_path: str = "trained_model/robust_cnn/training_history_robust_cnn.png"):
     fig, axes = plt.subplots(2, 2, figsize=(14, 10))
     
     # Accuracy
@@ -311,9 +314,9 @@ def main():
     # Build model
     model = build_robust_cnn(input_shape=X_train.shape[1:], num_classes=3)
     
-    # Create model directory
-    model_dir = Path("trained_model")
-    model_dir.mkdir(exist_ok=True)
+    # Create trained_model/robust_cnn directory
+    model_dir = Path("trained_model") / "robust_cnn"
+    model_dir.mkdir(parents=True, exist_ok=True)
     
     # Setup callbacks
     callback_list = get_callbacks(model_dir)

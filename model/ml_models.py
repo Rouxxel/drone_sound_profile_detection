@@ -48,7 +48,7 @@ def setup_logging():
     logger = logging.getLogger("ml_models_logger")
     logger.setLevel(logging.INFO)
 
-    handler = logging.FileHandler(log_path, mode='w')
+    handler = logging.FileHandler(log_path, mode='w', encoding='utf-8')
     handler.setFormatter(CustomFormatter("%(asctime)s | %(levelname)s | %(message)s"))
 
     if logger.hasHandlers():
@@ -118,6 +118,9 @@ def load_dataset(csv_dir: str) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.n
 
 def extract_statistical_features(mfcc: np.ndarray) -> np.ndarray:
     """Extract statistical features from MFCC"""
+    # Ensure mfcc is a proper numpy array with float dtype
+    mfcc = np.asarray(mfcc, dtype=np.float32)
+    
     features = []
     
     # Mean, std, min, max for each coefficient
@@ -140,7 +143,7 @@ def extract_statistical_features(mfcc: np.ndarray) -> np.ndarray:
         features.extend(np.zeros(mfcc.shape[1]))
         features.extend(np.zeros(mfcc.shape[1]))
     
-    return np.array(features)
+    return np.array(features, dtype=np.float32)
 
 def prepare_ml_features(X: np.ndarray) -> np.ndarray:
     """Convert MFCC arrays to feature vectors for ML models"""
@@ -321,9 +324,9 @@ def main():
     best_result = max(results, key=lambda x: x['accuracy'])
     logger.info(f"\nBest Model: {best_result['name']} with {best_result['accuracy']*100:.2f}% accuracy")
     
-    # Save best model and scaler
-    model_dir = Path("trained_model")
-    model_dir.mkdir(exist_ok=True)
+    # Create trained_model/ml_models directory
+    model_dir = Path("trained_model") / "ml_models"
+    model_dir.mkdir(parents=True, exist_ok=True)
     
     best_model_path = model_dir / f"best_ml_model_{best_result['name'].lower()}.pkl"
     with open(best_model_path, 'wb') as f:
