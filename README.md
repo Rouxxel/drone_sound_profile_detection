@@ -2,6 +2,10 @@
 
 A comprehensive machine learning project for detecting and classifying audio signatures of drones, helicopters, and background noise using both Deep Learning (CNN) and Traditional ML models.
 
+The models should be able to detect:
+1. FPV quadcopters
+2. Fixed‑wing loitering munitions (Lancet, KUB, V2U, etc.)
+
 ## Project Overview
 
 This project implements multiple machine learning approaches to classify audio into three categories:
