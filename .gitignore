@@ -8,6 +8,10 @@ __pycache__/
 
 #Specific
 *.wav
+*.mp3
+*.m4a
+*.ogg
+*.flac
 *.csv
 *.png
 *.h5
@@ -16,8 +20,6 @@ __pycache__/
 # Model files and training outputs
 trained_model/
 logs/
-*.h5
-*.pkl
 
 # Distribution / packaging
 .Python
