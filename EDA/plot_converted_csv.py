@@ -6,7 +6,7 @@ import librosa
 
 # ---------------- SETTINGS ---------------- #
 
-csv_folder = "../converted_csv/"
+csv_folder = "../datasets/converted_csv/"
 plots_dir = "plots"
 
 samp_rate = 44100        # sampling rate used for MFCC extraction
