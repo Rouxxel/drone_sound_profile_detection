@@ -12,7 +12,7 @@ os.makedirs(output_folder, exist_ok=True)
 
 #Iterate through all .wav files in the folder
 for filename in os.listdir(audio_folder):
-    if filename.lower().endswith(".wav"):
+    if filename.lower().endswith(".wav", ".mp3", ".flac", ".ogg", ".m4a"):
         file_path = os.path.join(audio_folder, filename)
         print(f"Processing {filename}...")
 
