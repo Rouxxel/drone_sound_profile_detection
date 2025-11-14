@@ -7,7 +7,7 @@ import kagglehub
 from kagglehub.exceptions import KaggleApiHTTPError
 
 DATASET = "tacticularcancer/drone-detection-dataset"
-#Extract only the audio files and delete de rest!!!
+#Extract only the audio files, moge to "audios/" and delete de rest!!!
 
 # Save dataset files in the same directory as this script
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
