@@ -14,6 +14,14 @@ os.makedirs(output_folder, exist_ok=True)
 #Iterate through all .wav files in the folder
 for filename in os.listdir(audio_folder):
     if filename.lower().endswith(file_types):
+        # Check if CSV already exists
+        csv_filename = os.path.splitext(filename)[0] + ".csv"
+        csv_path = os.path.join(output_folder, csv_filename)
+        
+        if os.path.exists(csv_path):
+            print(f"Skipping {filename} -> {csv_filename} already exists.")
+            continue
+        
         file_path = os.path.join(audio_folder, filename)
         print(f"Processing {filename}...")
 
@@ -31,8 +39,6 @@ for filename in os.listdir(audio_folder):
 
         #Convert to DataFrame and save as CSV
         mfcc_df = pd.DataFrame(mfcc)
-        csv_filename = os.path.splitext(filename)[0] + ".csv"
-        csv_path = os.path.join(output_folder, csv_filename)
         mfcc_df.to_csv(csv_path, index=False)
 
         print(f"Saved {csv_filename} in {output_folder}")

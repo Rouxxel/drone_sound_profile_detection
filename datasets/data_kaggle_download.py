@@ -2,12 +2,15 @@
 # Requires: pip install kagglehub and kaggle.json credentials with API key
 
 import os
+from pathlib import Path
 import shutil
 import kagglehub
 from kagglehub.exceptions import KaggleApiHTTPError
 
 DATASET = "tacticularcancer/drone-detection-dataset"
 #Extract only the audio files, moge to "audios/" and delete de rest!!!
+audio_dir = Path("audios")
+audio_dir.mkdir(exist_ok=True)
 
 # Save dataset files in the same directory as this script
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
