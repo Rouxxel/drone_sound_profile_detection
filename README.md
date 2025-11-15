@@ -8,10 +8,16 @@ The models should be able to detect:
 
 ## Project Overview
 
-This project implements multiple machine learning approaches to classify audio into three categories:
+This project implements multiple machine learning approaches for audio classification with two modes:
+
+### Multiclass Classification (3 classes)
 - **Drone** sounds
 - **Helicopter** sounds
 - **Background** noise
+
+### Binary Classification (2 classes)
+- **DRONE**: Drone sounds
+- **NO_DRONE**: Background + Helicopter sounds combined
 
 The project includes:
 - **Tiny CNN**: Lightweight model for low-resource environments
@@ -32,28 +38,31 @@ drone_sound_profile_detection/
 │   │   └── BACKGROUND_*.csv        # 30 background noise samples
 │   └── wav_to_csv_converter.py     # Script to convert WAV to MFCC CSV
 ├── model/
-│   ├── tiny_cnn_model.py           # Lightweight CNN training script
-│   ├── robust_cnn_model.py         # Advanced CNN with augmentation
-│   ├── ml_models.py                # Traditional ML models (RF, SVM, XGBoost, GB)
-│   └── testing/
-│       ├── test_tiny_model.py      # Test tiny CNN
-│       ├── test_robust_model.py    # Test robust CNN
-│       └── test_ml_models.py       # Test all ML models
+│   ├── multiclass/                 # 3-class classification (Drone, Helicopter, Background)
+│   │   ├── tiny_cnn_model.py
+│   │   ├── robust_cnn_model.py
+│   │   ├── ml_models.py
+│   │   └── testing/
+│   ├── binary/                     # 2-class classification (Drone vs No-Drone)
+│   │   ├── tiny_cnn_binary.py
+│   │   ├── ml_models_binary.py
+│   │   └── testing/
+│   │       ├── test_tiny_cnn_binary.py
+│   │       └── test_ml_models_binary.py
+│   └── predict_single_audio.py     # Single audio prediction script
 ├── trained_model/                   # Saved trained models (created after training)
-│   ├── tiny_cnn/                   # Tiny CNN models
-│   │   ├── tiny_cnn_audio_model.pkl
-│   │   └── tiny_cnn_audio_model.h5
-│   ├── robust_cnn/                 # Robust CNN models
-│   │   ├── robust_cnn_audio_model.pkl
-│   │   ├── robust_cnn_audio_model.h5
-│   │   └── best_model.keras        # Best checkpoint
-│   └── ml_models/                  # Traditional ML models
-│       ├── ml_model_randomforest.pkl
-│       ├── ml_model_svm.pkl
-│       ├── ml_model_xgboost.pkl
-│       ├── ml_model_gradientboosting.pkl
-│       ├── best_ml_model_*.pkl
-│       └── feature_scaler.pkl
+│   ├── multiclass/                 # 3-class models
+│   │   ├── tiny_cnn/
+│   │   ├── robust_cnn/
+│   │   └── ml_models/
+│   └── binary/                     # 2-class models (Drone vs No-Drone)
+│       ├── tiny_cnn/
+│       │   ├── tiny_cnn_binary_model.pkl
+│       │   └── tiny_cnn_binary_model.h5
+│       └── ml_models/
+│           ├── ml_model_binary_*.pkl
+│           ├── best_ml_model_binary_*.pkl
+│           └── feature_scaler_binary.pkl
 ├── logs/                            # Training and testing logs
 ├── requirements.txt                 # Python dependencies
 └── README.md                        # This file
@@ -130,46 +139,57 @@ This will process all `.wav` files in the `audios/` folder and save MFCC feature
 
 ### 2. Train Models
 
-Navigate to the model directory and choose your approach:
+Choose between **Multiclass** (3 classes) or **Binary** (Drone vs No-Drone) classification:
 
-#### Option A: Tiny CNN (Fast, Lightweight)
+#### Multiclass Classification (Drone, Helicopter, Background)
+
 ```bash
-cd model
+cd model/multiclass
+
+# Option A: Tiny CNN
 python tiny_cnn_model.py
-```
-- Training time: ~5-10 minutes
-- Model size: ~200KB
-- Good for: Quick prototyping, edge devices
 
-#### Option B: Robust CNN (Best Accuracy)
-```bash
-cd model
+# Option B: Robust CNN
 python robust_cnn_model.py
-```
-- Training time: ~15-30 minutes
-- Model size: ~2MB
-- Features: Data augmentation, early stopping, learning rate scheduling
-- Good for: Maximum performance
 
-#### Option C: Traditional ML Models (All at Once)
-```bash
-cd model
+# Option C: ML Models
 python ml_models.py
 ```
-- Training time: ~2-5 minutes
-- Trains: Random Forest, SVM, XGBoost, Gradient Boosting
-- Automatically selects and saves the best model
-- Good for: Fast training, interpretability
+
+#### Binary Classification (Drone vs No-Drone)
+
+```bash
+cd model/binary
+
+# Option A: Tiny CNN Binary
+python tiny_cnn_binary.py
+
+# Option B: ML Models Binary
+python ml_models_binary.py
+```
+
+**Binary classification is recommended when:**
+- You only need to detect drone presence
+- You want higher accuracy (simpler problem)
+- You need faster inference
 
 ### 3. Test Models
 
 After training, evaluate model performance:
 
+#### Multiclass Models
 ```bash
-cd model/testing
+cd model/multiclass/testing
 python test_tiny_model.py      # Test tiny CNN
 python test_robust_model.py    # Test robust CNN
 python test_ml_models.py       # Test all ML models
+```
+
+#### Binary Models
+```bash
+cd model/binary/testing
+python test_tiny_cnn_binary.py      # Test binary CNN
+python test_ml_models_binary.py     # Test binary ML models
 ```
 
 Each test script provides:
