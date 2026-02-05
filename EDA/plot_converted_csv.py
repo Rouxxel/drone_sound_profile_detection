@@ -1,92 +1,110 @@
+"""
+Create MFCC heatmap + RMS plots for each CSV in datasets/converted_csv/,
+and save them in EDA/plots/. Run from any directory; paths are relative to this script.
+"""
+
 import os
+from pathlib import Path
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import librosa
 
 # ---------------- SETTINGS ---------------- #
+SCRIPT_DIR = Path(__file__).resolve().parent
+CSV_FOLDER = SCRIPT_DIR.parent / "datasets" / "converted_csv"
+PLOTS_DIR = SCRIPT_DIR / "plots"
+AUDIOS_FOLDER = SCRIPT_DIR.parent / "datasets" / "audios"
 
-csv_folder = "../datasets/converted_csv/"
-plots_dir = "plots"
+samp_rate = 44100
+hop_length = 512
 
-samp_rate = 44100        # sampling rate used for MFCC extraction
-hop_length = 512         # hop_length used for MFCC extraction
-
-# Set to None to plot ALL CSVs
-# Set to a filename (e.g., "DRONE_001.csv") to plot ONLY that file
+# Set to None to plot ALL CSVs; set to a filename (e.g. "DRONE_001.csv") to plot only that file
 plot_one = None
 
-#Create output folder
-os.makedirs(plots_dir, exist_ok=True)
+# Create plots folder if it doesn't exist
+PLOTS_DIR.mkdir(exist_ok=True)
+
+if not CSV_FOLDER.exists():
+    print(f"❌ CSV folder not found: {CSV_FOLDER}")
+    print("   Run audio_to_csv_converter.py first to create converted_csv/.")
+    exit(1)
+
+print(f"📂 Reading from: {CSV_FOLDER}")
+print(f"📂 Saving to:   {PLOTS_DIR}\n")
 
 # Pick which files to process
 if plot_one is None:
-    csv_files = [f for f in os.listdir(csv_folder) if f.lower().endswith(".csv")]
+    csv_files = sorted(f for f in os.listdir(CSV_FOLDER) if f.lower().endswith(".csv"))
 else:
-    csv_files = [plot_one]  # Only one file
+    csv_files = [plot_one]
 
-#Iterate through selected files
 for csv_file in csv_files:
-    csv_path = os.path.join(csv_folder, csv_file)
+    csv_path = CSV_FOLDER / csv_file
 
-    #Extract base name (e.g., DRONE_001)
-    base_name = os.path.splitext(csv_file)[0]
+    if not csv_path.exists():
+        print(f"Skipping {csv_file} (not found).")
+        continue
 
-    #Extract class name (text before first underscore)
+    base_name = csv_path.stem
     class_name = base_name.split("_")[0]
+    plot_path = PLOTS_DIR / f"{base_name}.png"
 
-    #Output plot file
-    plot_path = os.path.join(plots_dir, f"{base_name}.png")
+    if plot_one is None and plot_path.exists():
+        print(f"Skipping {csv_file} -> plot already exists.")
+        continue
 
-    #Skip if it already exists (only when plotting all)
-    if plot_one is None and os.path.exists(plot_path):
-            print(f"Skipping {csv_file} -> plot already exists.")
-            continue
     print(f"Processing {csv_file}...")
 
-    #Corresponding WAV path
-    audio_path = csv_path.replace("converted_csv", "audios").replace(".csv", ".wav")
-
-    # --- Load MFCC CSV ---
+    # Load MFCC CSV
     mfcc_df = pd.read_csv(csv_path)
     mfcc_data = mfcc_df.values
     n_frames, n_mfcc = mfcc_data.shape
 
-    # --- Timestamps ---
+    # Timestamps from frame count (same convention as converter: hop_length=512)
     timestamps = np.arange(n_frames) * hop_length / samp_rate
 
-    # --- RMS volume curve ---
-    y, _ = librosa.load(audio_path, sr=samp_rate)
-    rms = librosa.feature.rms(y=y, hop_length=hop_length)[0]
-    rms_timestamps = np.arange(len(rms)) * hop_length / samp_rate
+    # RMS from corresponding WAV if available
+    audio_path = AUDIOS_FOLDER / f"{base_name}.wav"
+    if audio_path.exists():
+        y, _ = librosa.load(str(audio_path), sr=samp_rate)
+        rms = librosa.feature.rms(y=y, hop_length=hop_length)[0]
+        rms_timestamps = np.arange(len(rms)) * hop_length / samp_rate
+        has_rms = True
+    else:
+        has_rms = False
 
-    # ----------------- PLOTTING ----------------- #
-    plt.figure(figsize=(14, 6))
+    # Plotting
+    n_subplots = 2 if has_rms else 1
+    plt.figure(figsize=(14, 6 if has_rms else 3))
 
-    # Heatmap
-    plt.subplot(2, 1, 1)
+    # MFCC heatmap
+    plt.subplot(n_subplots, 1, 1)
     plt.imshow(
-            mfcc_data.T,
-            aspect='auto',
-            origin='lower',
-            extent=[timestamps[0], timestamps[-1], 1, n_mfcc]
-            )
+        mfcc_data.T,
+        aspect="auto",
+        origin="lower",
+        extent=[timestamps[0], timestamps[-1], 1, n_mfcc],
+    )
     plt.colorbar(label="Normalized MFCC")
     plt.xlabel("Time (s)")
     plt.ylabel("MFCC Coefficient")
     plt.title(f"{class_name} – MFCC Heatmap")
 
-    #RMS volume
-    plt.subplot(2, 1, 2)
-    plt.plot(rms_timestamps, rms, color='orange')
-    plt.xlabel("Time (s)")
-    plt.ylabel("Volume (RMS)")
-    plt.title(f"{class_name} – Volume Over Time")
+    # RMS volume (only if WAV was found)
+    if has_rms:
+        plt.subplot(2, 1, 2)
+        plt.plot(rms_timestamps, rms, color="orange")
+        plt.xlabel("Time (s)")
+        plt.ylabel("Volume (RMS)")
+        plt.title(f"{class_name} – Volume Over Time")
+    else:
+        plt.suptitle(f"{class_name} – MFCC only (no WAV for RMS)", y=1.02)
 
     plt.tight_layout()
     plt.savefig(plot_path)
     plt.close()
 
-    print(f"Saved: {plot_path}")
+    print(f"  Saved {plot_path.name}")
 
 print("✅ Done.")
