@@ -6,6 +6,50 @@ The models should be able to detect:
 1. FPV quadcopters
 2. Fixed‑wing loitering munitions (Lancet, KUB, V2U, etc.)
 
+---
+
+## Target Application: Embedded Drone Detection
+
+The purpose of this project is to **select and optimize the most efficient model** for deployment on an **embedded system**. The target use case is an **add-on for soldier vests** that detects drones by sound: **four microphones** provide **directional information** (where the sound is coming from), and a **lightweight ML model** runs on the device to classify the audio and determine **whether it is a drone or not**. Alerts (detection + direction) are sent to helmet comms.
+
+### Proposed Hardware & Software (Vest Add-On)
+
+| Component | Details |
+|-----------|---------|
+| **Hardware** | |
+| MCU | ESP32-S3 Dev Module (~10 g, €6–15) |
+| Audio capture | 4× I²S microphones (front/back) at 16 kHz |
+| Microphones | 4× MEMS I²S Microphones (~16 g, €6–15) |
+| Power | 2,000 mAh Li-Po Battery (~50 g, €6–15) |
+| Other | Enclosure, wiring & mounts (~15–20 g, €5–12), Wind-noise reduction foam (<1 g) |
+| **Software / processing** | |
+| Buffering | Rolling buffer: 2–4 s of audio for pre-trigger context |
+| Calibration | Auto-calibration: per-mic gain normalization at startup |
+| DSP | Digital notch filters + wind-noise suppression |
+| Inference | Duty-cycled ML: energy detector triggers model only when needed |
+| Model | Lightweight audio classifier for drone detection |
+| **Output** | Alerts to helmet comms with detection & direction |
+| **Total weight** | ~90 g |
+| **Total cost** | €25–60 |
+| **Runtime** | ~8 hours continuous (extendable) |
+
+### Benefits
+
+- **Low cost** (€25–60 per unit)
+- **Lightweight system** (~90–120 g total)
+- **Long battery life** (~8 hours continuous)
+- **360° acoustic** coverage
+- **Reliable drone identification**
+- **Low false-alarm** operation
+- **Automatic self-calibration**
+- **Environmental noise resistance**
+- **Efficient** duty-cycled processing
+- **Notification** through embedded comms
+- **Rugged and modular** hardware
+- **Detection range** ~100–900 m
+
+---
+
 ## Project Overview
 
 This project implements multiple machine learning approaches for audio classification with two modes:
