@@ -18,6 +18,13 @@ from sklearn.metrics import classification_report, confusion_matrix, accuracy_sc
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 
+# Paths (script in modeling/models/multiclass/testing/; repo root = 4 levels up)
+SCRIPT_DIR = Path(__file__).resolve().parent
+REPO_ROOT = SCRIPT_DIR.parent.parent.parent.parent
+CSV_DIR = REPO_ROOT / "datasets" / "converted_csv"
+TRAINED_MODEL_ROOT = REPO_ROOT / "trained_model"
+LOGS_DIR = REPO_ROOT / "logs"
+
 # -------------------------------------------------------------------------
 # Logging Setup
 # -------------------------------------------------------------------------
@@ -33,9 +40,8 @@ class CustomFormatter(logging.Formatter):
         return t
 
 def setup_logging():
-    log_dir = Path("logs")
-    log_dir.mkdir(exist_ok=True)
-    log_path = log_dir / "ml_models_testing.log"
+    LOGS_DIR.mkdir(parents=True, exist_ok=True)
+    log_path = LOGS_DIR / "ml_models_testing.log"
 
     logger = logging.getLogger("ml_test_logger")
     logger.setLevel(logging.INFO)
@@ -197,7 +203,7 @@ def main():
     logger.info("Starting ML Models Testing...")
     
     # Check for trained models
-    model_dir = Path("../trained_model/ml_models")
+    model_dir = TRAINED_MODEL_ROOT / "ml_models"
     if not model_dir.exists():
         logger.error(f"Model directory not found: {model_dir}")
         logger.error("Please train the models first by running ml_models.py")
@@ -216,7 +222,7 @@ def main():
         scaler = pickle.load(f)
     
     # Load dataset
-    csv_dir = "../../../datasets/converted_csv"
+    csv_dir = str(CSV_DIR)
     X_train_raw, y_train, X_val_raw, y_val, class_names = load_dataset(csv_dir)
     
     # Extract and scale features

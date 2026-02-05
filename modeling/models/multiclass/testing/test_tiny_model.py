@@ -19,6 +19,13 @@ from sklearn.model_selection import train_test_split
 # Suppress TensorFlow oneDNN info logs
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
+# Paths (script in modeling/models/multiclass/testing/; repo root = 4 levels up)
+SCRIPT_DIR = Path(__file__).resolve().parent
+REPO_ROOT = SCRIPT_DIR.parent.parent.parent.parent
+CSV_DIR = REPO_ROOT / "datasets" / "converted_csv"
+TRAINED_MODEL_ROOT = REPO_ROOT / "trained_model"
+LOGS_DIR = REPO_ROOT / "logs"
+
 # -------------------------------------------------------------------------
 # Logging Setup
 # -------------------------------------------------------------------------
@@ -34,9 +41,8 @@ class CustomFormatter(logging.Formatter):
         return t
 
 def setup_logging():
-    log_dir = Path("logs")
-    log_dir.mkdir(exist_ok=True)
-    log_path = log_dir / "tiny_cnn_testing.log"
+    LOGS_DIR.mkdir(parents=True, exist_ok=True)
+    log_path = LOGS_DIR / "tiny_cnn_testing.log"
 
     logger = logging.getLogger("tiny_cnn_test_logger")
     logger.setLevel(logging.INFO)
@@ -128,7 +134,7 @@ def main():
     logger.info("Starting Tiny CNN model testing...")
     
     # Load the trained model
-    model_path = Path("../trained_model/tiny_cnn/tiny_cnn_audio_model.pkl")
+    model_path = TRAINED_MODEL_ROOT / "tiny_cnn" / "tiny_cnn_audio_model.pkl"
     if not model_path.exists():
         logger.error(f"Model file not found: {model_path}")
         logger.error("Please train the model first by running tiny_cnn_model.py")
@@ -140,7 +146,7 @@ def main():
     logger.info("Model loaded successfully")
     
     # Load and preprocess the dataset
-    csv_dir = "../../../datasets/converted_csv"
+    csv_dir = str(CSV_DIR)
     X_train_raw, y_train, X_val_raw, y_val, class_names = load_dataset(csv_dir)
     
     # Preprocess validation data

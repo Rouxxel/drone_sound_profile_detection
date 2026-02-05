@@ -16,6 +16,13 @@ from sklearn.model_selection import train_test_split
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
+# Paths (script in modeling/models/binary/testing/; repo root = 4 levels up)
+SCRIPT_DIR = Path(__file__).resolve().parent
+REPO_ROOT = SCRIPT_DIR.parent.parent.parent.parent
+CSV_DIR = REPO_ROOT / "datasets" / "converted_csv"
+TRAINED_MODEL_ROOT = REPO_ROOT / "trained_model"
+LOGS_DIR = REPO_ROOT / "logs"
+
 class CustomFormatter(logging.Formatter):
     def formatTime(self, record, datefmt=None):
         ct = self.converter(record.created)
@@ -27,9 +34,8 @@ class CustomFormatter(logging.Formatter):
         return t
 
 def setup_logging():
-    log_dir = Path("logs")
-    log_dir.mkdir(exist_ok=True)
-    log_path = log_dir / "tiny_cnn_binary_testing.log"
+    LOGS_DIR.mkdir(parents=True, exist_ok=True)
+    log_path = LOGS_DIR / "tiny_cnn_binary_testing.log"
 
     logger = logging.getLogger("tiny_cnn_binary_test_logger")
     logger.setLevel(logging.INFO)
@@ -103,7 +109,7 @@ def preprocess_data(X: np.ndarray) -> np.ndarray:
 def main():
     logger.info("Starting Binary Tiny CNN model testing...")
     
-    model_path = Path("../../trained_model/binary/tiny_cnn/tiny_cnn_binary_model.pkl")
+    model_path = TRAINED_MODEL_ROOT / "binary" / "tiny_cnn" / "tiny_cnn_binary_model.pkl"
     if not model_path.exists():
         logger.error(f"Model file not found: {model_path}")
         logger.error("Please train the model first by running tiny_cnn_binary.py")
@@ -114,7 +120,7 @@ def main():
         model = pickle.load(f)
     logger.info("Model loaded successfully")
     
-    csv_dir = "../../../datasets/converted_csv"
+    csv_dir = str(CSV_DIR)
     X_train_raw, y_train, X_val_raw, y_val, class_names = load_dataset(csv_dir)
     
     X_val = preprocess_data(X_val_raw)

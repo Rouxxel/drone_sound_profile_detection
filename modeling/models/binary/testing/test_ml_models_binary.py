@@ -15,6 +15,13 @@ import pandas as pd
 from sklearn.metrics import classification_report, confusion_matrix, accuracy_score
 from sklearn.model_selection import train_test_split
 
+# Paths (script in modeling/models/binary/testing/; repo root = 4 levels up)
+SCRIPT_DIR = Path(__file__).resolve().parent
+REPO_ROOT = SCRIPT_DIR.parent.parent.parent.parent
+CSV_DIR = REPO_ROOT / "datasets" / "converted_csv"
+TRAINED_MODEL_ROOT = REPO_ROOT / "trained_model"
+LOGS_DIR = REPO_ROOT / "logs"
+
 class CustomFormatter(logging.Formatter):
     def formatTime(self, record, datefmt=None):
         ct = self.converter(record.created)
@@ -26,9 +33,8 @@ class CustomFormatter(logging.Formatter):
         return t
 
 def setup_logging():
-    log_dir = Path("logs")
-    log_dir.mkdir(exist_ok=True)
-    log_path = log_dir / "ml_models_binary_testing.log"
+    LOGS_DIR.mkdir(parents=True, exist_ok=True)
+    log_path = LOGS_DIR / "ml_models_binary_testing.log"
 
     logger = logging.getLogger("ml_binary_test_logger")
     logger.setLevel(logging.INFO)
@@ -156,7 +162,7 @@ def test_model(model, model_name: str, X_val, y_val, class_names: Dict):
 def main():
     logger.info("Starting Binary ML Models Testing...")
     
-    model_dir = Path("../../trained_model/binary/ml_models")
+    model_dir = TRAINED_MODEL_ROOT / "binary" / "ml_models"
     if not model_dir.exists():
         logger.error(f"Model directory not found: {model_dir}")
         logger.error("Please train the models first by running ml_models_binary.py")
@@ -172,7 +178,7 @@ def main():
     with open(scaler_path, 'rb') as f:
         scaler = pickle.load(f)
     
-    csv_dir = "../../../datasets/converted_csv"
+    csv_dir = str(CSV_DIR)
     X_train_raw, y_train, X_val_raw, y_val, class_names = load_dataset(csv_dir)
     
     X_val = prepare_ml_features(X_val_raw)
