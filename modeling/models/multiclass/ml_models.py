@@ -27,6 +27,15 @@ from sklearn.preprocessing import StandardScaler
 import xgboost as xgb
 
 # -------------------------------------------------------------------------
+# Paths (script in modeling/models/multiclass/; repo root = 3 levels up)
+# -------------------------------------------------------------------------
+SCRIPT_DIR = Path(__file__).resolve().parent
+REPO_ROOT = SCRIPT_DIR.parent.parent.parent
+CSV_DIR = REPO_ROOT / "datasets" / "converted_csv"
+TRAINED_MODEL_ROOT = REPO_ROOT / "trained_model"
+LOGS_DIR = REPO_ROOT / "logs"
+
+# -------------------------------------------------------------------------
 # Logging Setup
 # -------------------------------------------------------------------------
 
@@ -41,9 +50,8 @@ class CustomFormatter(logging.Formatter):
         return t
 
 def setup_logging():
-    log_dir = Path("logs")
-    log_dir.mkdir(exist_ok=True)
-    log_path = log_dir / "ml_models_training.log"
+    LOGS_DIR.mkdir(parents=True, exist_ok=True)
+    log_path = LOGS_DIR / "ml_models_training.log"
 
     logger = logging.getLogger("ml_models_logger")
     logger.setLevel(logging.INFO)
@@ -289,7 +297,7 @@ def main():
     logger.info("Starting Traditional ML Models Training...")
     
     # Load dataset
-    csv_dir = "../../datasets/converted_csv"
+    csv_dir = str(CSV_DIR)
     X_train_raw, y_train, X_val_raw, y_val = load_dataset(csv_dir)
     
     # Extract features
@@ -324,8 +332,8 @@ def main():
     best_result = max(results, key=lambda x: x['accuracy'])
     logger.info(f"\nBest Model: {best_result['name']} with {best_result['accuracy']*100:.2f}% accuracy")
     
-    # Create trained_models/ml_models directory
-    model_dir = Path("trained_model") / "ml_models"
+    # Create trained_model/ml_models directory at repo root
+    model_dir = TRAINED_MODEL_ROOT / "ml_models"
     model_dir.mkdir(parents=True, exist_ok=True)
     
     best_model_path = model_dir / f"best_ml_model_{best_result['name'].lower()}.pkl"

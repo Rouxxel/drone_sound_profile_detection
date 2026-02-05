@@ -30,6 +30,15 @@ import matplotlib.pyplot as plt
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
 # -------------------------------------------------------------------------
+# Paths (script in modeling/models/multiclass/; repo root = 3 levels up)
+# -------------------------------------------------------------------------
+SCRIPT_DIR = Path(__file__).resolve().parent
+REPO_ROOT = SCRIPT_DIR.parent.parent.parent
+CSV_DIR = REPO_ROOT / "datasets" / "converted_csv"
+TRAINED_MODEL_ROOT = REPO_ROOT / "trained_model"
+LOGS_DIR = REPO_ROOT / "logs"
+
+# -------------------------------------------------------------------------
 # Logging Setup
 # -------------------------------------------------------------------------
 
@@ -44,9 +53,8 @@ class CustomFormatter(logging.Formatter):
         return t
 
 def setup_logging():
-    log_dir = Path("logs")
-    log_dir.mkdir(exist_ok=True)
-    log_path = log_dir / "robust_cnn_training.log"
+    LOGS_DIR.mkdir(parents=True, exist_ok=True)
+    log_path = LOGS_DIR / "robust_cnn_training.log"
 
     logger = logging.getLogger("robust_cnn_logger")
     logger.setLevel(logging.INFO)
@@ -246,7 +254,9 @@ def get_callbacks(model_dir: Path):
 # Plotting Function
 # -------------------------------------------------------------------------
 
-def plot_training(history, save_path: str = "trained_model/robust_cnn/training_history_robust_cnn.png"):
+def plot_training(history, save_path=None):
+    if save_path is None:
+        save_path = TRAINED_MODEL_ROOT / "robust_cnn" / "training_history_robust_cnn.png"
     fig, axes = plt.subplots(2, 2, figsize=(14, 10))
     
     # Accuracy
@@ -286,7 +296,7 @@ def plot_training(history, save_path: str = "trained_model/robust_cnn/training_h
     axes[1, 1].grid(True, alpha=0.3)
     
     plt.tight_layout()
-    plt.savefig(save_path, dpi=150)
+    plt.savefig(str(save_path), dpi=150)
     logger.info(f"Training plot saved to {save_path}")
 
 # -------------------------------------------------------------------------
@@ -314,8 +324,8 @@ def main():
     # Build model
     model = build_robust_cnn(input_shape=X_train.shape[1:], num_classes=3)
     
-    # Create trained_models/robust_cnn directory
-    model_dir = Path("trained_model") / "robust_cnn"
+    # Create trained_model/robust_cnn directory at repo root
+    model_dir = TRAINED_MODEL_ROOT / "robust_cnn"
     model_dir.mkdir(parents=True, exist_ok=True)
     
     # Setup callbacks

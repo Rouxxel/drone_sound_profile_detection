@@ -21,6 +21,13 @@ import matplotlib.pyplot as plt
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
+# Paths (script in modeling/models/binary/; repo root = 3 levels up)
+SCRIPT_DIR = Path(__file__).resolve().parent
+REPO_ROOT = SCRIPT_DIR.parent.parent.parent
+CSV_DIR = REPO_ROOT / "datasets" / "converted_csv"
+TRAINED_MODEL_ROOT = REPO_ROOT / "trained_model"
+LOGS_DIR = REPO_ROOT / "logs"
+
 class CustomFormatter(logging.Formatter):
     def formatTime(self, record, datefmt=None):
         ct = self.converter(record.created)
@@ -32,9 +39,8 @@ class CustomFormatter(logging.Formatter):
         return t
 
 def setup_logging():
-    log_dir = Path("logs")
-    log_dir.mkdir(exist_ok=True)
-    log_path = log_dir / "tiny_cnn_binary_training.log"
+    LOGS_DIR.mkdir(parents=True, exist_ok=True)
+    log_path = LOGS_DIR / "tiny_cnn_binary_training.log"
 
     logger = logging.getLogger("tiny_cnn_binary_logger")
     logger.setLevel(logging.INFO)
@@ -138,12 +144,12 @@ def plot_training(history):
     plt.legend()
     plt.title("Loss")
     plt.tight_layout()
-    plt.savefig("trained_model/tiny_cnn/training_history_tiny_cnn_binary.png")
+    plt.savefig(str(TRAINED_MODEL_ROOT / "binary" / "tiny_cnn" / "training_history_tiny_cnn_binary.png"))
     logger.info("Training plot saved to training_history_tiny_cnn_binary.png")
 
 def main():
     logger.info("Starting Binary Tiny CNN training...")
-    csv_dir = "../../datasets/converted_csv"
+    csv_dir = str(CSV_DIR)
     X_train_raw, y_train, X_val_raw, y_val = load_dataset(csv_dir)
     X_train = preprocess_data(X_train_raw)
     X_val = preprocess_data(X_val_raw)
@@ -161,8 +167,8 @@ def main():
                         batch_size=8,
                         verbose=1).history
 
-    # Create trained_model/binary/tiny_cnn directory
-    model_dir = Path("trained_model/tiny_cnn")
+    # Create trained_model/binary/tiny_cnn directory at repo root
+    model_dir = TRAINED_MODEL_ROOT / "binary" / "tiny_cnn"
     model_dir.mkdir(parents=True, exist_ok=True)
     
     # Save model as pickle
