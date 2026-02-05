@@ -19,7 +19,7 @@ from sklearn.model_selection import train_test_split
 SCRIPT_DIR = Path(__file__).resolve().parent
 REPO_ROOT = SCRIPT_DIR.parent.parent.parent.parent
 CSV_DIR = REPO_ROOT / "datasets" / "converted_csv"
-TRAINED_MODEL_ROOT = REPO_ROOT / "trained_model"
+TRAINED_MODEL_ROOT = REPO_ROOT / "trained_models"
 LOGS_DIR = REPO_ROOT / "logs"
 
 class CustomFormatter(logging.Formatter):
