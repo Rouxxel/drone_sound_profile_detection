@@ -36,43 +36,12 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 REPO_ROOT = SCRIPT_DIR.parent.parent.parent
 CSV_DIR = REPO_ROOT / "datasets" / "converted_csv"
 TRAINED_MODEL_ROOT = REPO_ROOT / "trained_models"
-LOGS_DIR = REPO_ROOT / "logs"
 
 # -------------------------------------------------------------------------
-# Logging Setup
+# Logging (shared format; log file: logs/robust_cnn_training.log)
 # -------------------------------------------------------------------------
-
-class CustomFormatter(logging.Formatter):
-    def formatTime(self, record, datefmt=None):
-        ct = self.converter(record.created)
-        t = "%04d-%02d-%02d %02d:%02d:%02d,%03d" % (
-            ct.tm_year, ct.tm_mon, ct.tm_mday,
-            ct.tm_hour, ct.tm_min, ct.tm_sec,
-            int(record.created * 1000) % 1000
-        )
-        return t
-
-def setup_logging():
-    LOGS_DIR.mkdir(parents=True, exist_ok=True)
-    log_path = LOGS_DIR / "robust_cnn_training.log"
-
-    logger = logging.getLogger("robust_cnn_logger")
-    logger.setLevel(logging.INFO)
-
-    handler = logging.FileHandler(log_path, mode='w', encoding='utf-8')
-    handler.setFormatter(CustomFormatter("%(asctime)s | %(levelname)s | %(message)s"))
-
-    if logger.hasHandlers():
-        logger.handlers.clear()
-
-    logger.addHandler(handler)
-
-    logger.info("Log handler successfully set")
-    logger.info(f"All logs are being saved in {log_path}")
-
-    return logger
-
-logger = setup_logging()
+from modeling.utils.custom_logger import get_logger
+logger = get_logger("robust_cnn_logger", "robust_cnn_training.log")
 
 # -------------------------------------------------------------------------
 # Dataset Loading

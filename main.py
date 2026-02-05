@@ -6,6 +6,7 @@ Logs every step to modeling_training.log in the repo root.
 """
 from __future__ import annotations
 
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -41,6 +42,72 @@ TESTING_SCRIPTS = [
     REPO_ROOT / "modeling" / "models" / "binary" / "testing" / "test_ml_models_binary.py",
 ]
 
+# Paths used to decide if a step is already done (skip)
+AUDIOS_DIR = REPO_ROOT / "datasets" / "audios"
+CONVERTED_CSV_DIR = REPO_ROOT / "datasets" / "converted_csv"
+EDA_PLOTS_DIR = REPO_ROOT / "modeling" / "EDA" / "plots"
+EDA_REPORT_DIR = REPO_ROOT / "modeling" / "EDA" / "eda_report"
+LOGS_DIR = REPO_ROOT / "logs"
+TRAINED_TINY_CNN = REPO_ROOT / "trained_models" / "tiny_cnn"
+TRAINED_ROBUST_CNN = REPO_ROOT / "trained_models" / "robust_cnn"
+TRAINED_ML_MODELS = REPO_ROOT / "trained_models" / "ml_models"
+TRAINED_BINARY_TINY = REPO_ROOT / "trained_models" / "binary" / "tiny_cnn"
+TRAINED_BINARY_ML = REPO_ROOT / "trained_models" / "binary" / "ml_models"
+TEST_LOG_FILES = [
+    "tiny_cnn_testing.log",
+    "ml_models_testing.log",
+    "robust_cnn_testing.log",
+    "tiny_cnn_binary_testing.log",
+    "ml_models_binary_testing.log",
+]
+
+
+def _has_files(dir_path: Path, suffix: str) -> bool:
+    """True if dir exists and contains at least one file with the given suffix (e.g. .wav)."""
+    if not dir_path.is_dir():
+        return False
+    return any(f.suffix.lower() == suffix.lower() for f in dir_path.iterdir() if f.is_file())
+
+
+def is_download_done() -> bool:
+    """True if datasets/audios/ exists and has at least one .wav file."""
+    return _has_files(AUDIOS_DIR, ".wav")
+
+
+def is_conversion_done() -> bool:
+    """True if datasets/converted_csv/ exists and has at least one .csv file."""
+    return _has_files(CONVERTED_CSV_DIR, ".csv")
+
+
+def is_eda_done() -> bool:
+    """True if EDA plots and report outputs exist."""
+    if not EDA_PLOTS_DIR.is_dir() or not _has_files(EDA_PLOTS_DIR, ".png"):
+        return False
+    report_md = EDA_REPORT_DIR / "07_eda_report.md"
+    return report_md.is_file()
+
+
+def is_training_done() -> bool:
+    """True if all five model outputs exist (tiny_cnn, robust_cnn, ml_models, binary/tiny_cnn, binary/ml_models)."""
+    def has_model(d: Path) -> bool:
+        if not d.is_dir():
+            return False
+        return any(f.suffix.lower() in (".pkl", ".h5", ".keras") for f in d.iterdir() if f.is_file())
+    return (
+        has_model(TRAINED_TINY_CNN)
+        and has_model(TRAINED_ROBUST_CNN)
+        and has_model(TRAINED_ML_MODELS)
+        and has_model(TRAINED_BINARY_TINY)
+        and has_model(TRAINED_BINARY_ML)
+    )
+
+
+def is_testing_done() -> bool:
+    """True if all five test log files exist in logs/."""
+    if not LOGS_DIR.is_dir():
+        return False
+    return all((LOGS_DIR / name).is_file() for name in TEST_LOG_FILES)
+
 
 def run_script(script_path: Path, label: str = None) -> tuple[str, int]:
     """Run a Python script from repo root; return (label, returncode)."""
@@ -52,9 +119,12 @@ def run_script(script_path: Path, label: str = None) -> tuple[str, int]:
         return (name, -1)
     log_handler.info(f"Running script: {name}")
     print(f"[RUN] {name} ...")
+    env = os.environ.copy()
+    env["PYTHONPATH"] = str(REPO_ROOT)
     result = subprocess.run(
         [sys.executable, str(script_path)],
         cwd=str(REPO_ROOT),
+        env=env,
         capture_output=False,
     )
     return (name, result.returncode)
@@ -111,42 +181,62 @@ def main():
     # 1. Download data
     log_handler.info("Step 1: Download dataset")
     print("\n--- Step 1: Download dataset ---")
-    if not run_sequential(DOWNLOAD_SCRIPT, "data_kaggle_download.py"):
-        log_handler.error("Pipeline aborted: Step 1 (Download) failed")
-        sys.exit(1)
-    log_handler.info("Step 1 completed: Download dataset")
+    if is_download_done():
+        log_handler.info("Step 1 skipped: data already in datasets/audios/")
+        print("[SKIP] Step 1: data already downloaded (audios/ has .wav files)")
+    else:
+        if not run_sequential(DOWNLOAD_SCRIPT, "data_kaggle_download.py"):
+            log_handler.error("Pipeline aborted: Step 1 (Download) failed")
+            sys.exit(1)
+        log_handler.info("Step 1 completed: Download dataset")
 
     # 2. Convert audio to CSV
     log_handler.info("Step 2: Convert audio to CSV")
     print("\n--- Step 2: Convert audio to CSV ---")
-    if not run_sequential(CONVERTER_SCRIPT, "audio_to_csv_converter.py"):
-        log_handler.error("Pipeline aborted: Step 2 (Convert) failed")
-        sys.exit(1)
-    log_handler.info("Step 2 completed: Convert audio to CSV")
+    if is_conversion_done():
+        log_handler.info("Step 2 skipped: converted_csv/ already has .csv files")
+        print("[SKIP] Step 2: conversion already done (converted_csv/ has .csv files)")
+    else:
+        if not run_sequential(CONVERTER_SCRIPT, "audio_to_csv_converter.py"):
+            log_handler.error("Pipeline aborted: Step 2 (Convert) failed")
+            sys.exit(1)
+        log_handler.info("Step 2 completed: Convert audio to CSV")
 
     # 3. EDA (concurrent)
     log_handler.info("Step 3: EDA (concurrent)")
     print("\n--- Step 3: EDA (concurrent) ---")
-    if not run_concurrent(EDA_SCRIPTS, "EDA"):
-        log_handler.error("Pipeline aborted: Step 3 (EDA) failed")
-        sys.exit(1)
-    log_handler.info("Step 3 completed: EDA")
+    if is_eda_done():
+        log_handler.info("Step 3 skipped: EDA outputs already exist (plots/ and eda_report/)")
+        print("[SKIP] Step 3: EDA already done (plots/ and eda_report/ present)")
+    else:
+        if not run_concurrent(EDA_SCRIPTS, "EDA"):
+            log_handler.error("Pipeline aborted: Step 3 (EDA) failed")
+            sys.exit(1)
+        log_handler.info("Step 3 completed: EDA")
 
     # 4. Train all models (concurrent)
     log_handler.info("Step 4: Train all models (concurrent)")
     print("\n--- Step 4: Train all models (concurrent) ---")
-    if not run_concurrent(TRAINING_SCRIPTS, "Training"):
-        log_handler.error("Pipeline aborted: Step 4 (Training) failed")
-        sys.exit(1)
-    log_handler.info("Step 4 completed: Train all models")
+    if is_training_done():
+        log_handler.info("Step 4 skipped: all model outputs already in trained_models/")
+        print("[SKIP] Step 4: models already trained (trained_models/ has all outputs)")
+    else:
+        if not run_concurrent(TRAINING_SCRIPTS, "Training"):
+            log_handler.error("Pipeline aborted: Step 4 (Training) failed")
+            sys.exit(1)
+        log_handler.info("Step 4 completed: Train all models")
 
     # 5. Test all models (concurrent; only after training is done)
     log_handler.info("Step 5: Test all models (concurrent)")
     print("\n--- Step 5: Test all models (concurrent) ---")
-    if not run_concurrent(TESTING_SCRIPTS, "Testing"):
-        log_handler.error("Pipeline aborted: Step 5 (Testing) failed")
-        sys.exit(1)
-    log_handler.info("Step 5 completed: Test all models")
+    if is_testing_done():
+        log_handler.info("Step 5 skipped: all test log files already in logs/")
+        print("[SKIP] Step 5: testing already done (logs/ has all test .log files)")
+    else:
+        if not run_concurrent(TESTING_SCRIPTS, "Testing"):
+            log_handler.error("Pipeline aborted: Step 5 (Testing) failed")
+            sys.exit(1)
+        log_handler.info("Step 5 completed: Test all models")
 
     log_handler.info("Pipeline finished successfully")
     log_handler.info("Testing results are in logs/: tiny_cnn_testing.log, ml_models_testing.log, robust_cnn_testing.log, tiny_cnn_binary_testing.log, ml_models_binary_testing.log")
