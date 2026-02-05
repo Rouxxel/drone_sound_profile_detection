@@ -1,11 +1,24 @@
 # Comprehensive Usage Guide
 
 ## Table of Contents
-1. [Dataset Preparation](#dataset-preparation)
-2. [Training Models](#training-models)
-3. [Testing Models](#testing-models)
-4. [Using Trained Models](#using-trained-models)
-5. [Troubleshooting](#troubleshooting)
+1. [Quick start (full pipeline)](#quick-start-full-pipeline)
+2. [Dataset Preparation](#dataset-preparation)
+3. [Training Models](#training-models)
+4. [Testing Models](#testing-models)
+5. [Using Trained Models](#using-trained-models)
+6. [Troubleshooting](#troubleshooting)
+
+---
+
+## Quick start (full pipeline)
+
+From the **repo root**, run the entire workflow (download → convert → EDA → train all → test all):
+
+```bash
+python main.py
+```
+
+This runs all dataset, EDA, training, and testing scripts in the correct order. Test results are saved in `logs/`.
 
 ---
 
@@ -13,29 +26,29 @@
 
 ### Step 1: Obtain Audio Files
 
-Place your `.wav` audio files in the `datasets/audios/` directory:
+**Option A – Download from Kaggle (recommended):**
+
+```bash
+python datasets/data_kaggle_download.py
 ```
-datasets/audios/
-├── drone_sound_1.wav
-├── helicopter_sound_1.wav
-├── background_noise_1.wav
-└── ...
-```
+
+This downloads the Kaggle dataset, copies all `.wav` files into `datasets/audios/`, and removes the temporary download folder. Requires Kaggle credentials (`kaggle.json`).
+
+**Option B – Manual:** Place your `.wav` files in `datasets/audios/` (create the folder if needed).
 
 ### Step 2: Convert Audio to MFCC Features
 
-Navigate to the datasets directory and run the converter:
+From the repo root:
 
 ```bash
-cd datasets
-python wav_to_csv_converter.py
+python datasets/audio_to_csv_converter.py
 ```
 
 **What this does:**
-- Reads all `.wav` files from `audios/` folder
-- Extracts 14 MFCC coefficients from each audio file
+- Reads all `.wav` (and optionally .mp3, .flac, etc.) from `datasets/audios/`
+- Extracts 14 MFCC coefficients from each file
 - Normalizes the MFCC features
-- Saves as CSV files in `converted_csv/` folder
+- Saves CSV files in `datasets/converted_csv/` (creates the folder if it does not exist)
 
 **Output format:**
 - Each CSV file contains MFCC features
@@ -65,11 +78,12 @@ datasets/converted_csv/
 
 ## Training Models
 
-### Option 1: Tiny CNN (Fast & Lightweight)
+All training scripts use paths relative to the repo root. Run from the **repo root** (e.g. `python modeling/models/multiclass/tiny_cnn_model.py`). Outputs go to `trained_models/` and `logs/` at the repo root; directories are created only if they do not exist.
+
+### Option 1: Tiny CNN – Multiclass (Fast & Lightweight)
 
 ```bash
-cd model
-python tiny_cnn_model.py
+python modeling/models/multiclass/tiny_cnn_model.py
 ```
 
 **Training Details:**
@@ -80,16 +94,15 @@ python tiny_cnn_model.py
 - **Best for:** Edge devices, real-time applications
 
 **Output:**
-- `trained_model/tiny_cnn/tiny_cnn_audio_model.pkl`
-- `trained_model/tiny_cnn/tiny_cnn_audio_model.h5`
-- `training_history_tiny_cnn.png`
+- `trained_models/tiny_cnn/tiny_cnn_audio_model.pkl`
+- `trained_models/tiny_cnn/tiny_cnn_audio_model.h5`
+- `trained_models/tiny_cnn/training_history_tiny_cnn.png`
 - `logs/tiny_cnn_training.log`
 
-### Option 2: Robust CNN (Maximum Accuracy)
+### Option 2: Robust CNN – Multiclass (Maximum Accuracy)
 
 ```bash
-cd model
-python robust_cnn_model.py
+python modeling/models/multiclass/robust_cnn_model.py
 ```
 
 **Training Details:**
@@ -101,17 +114,16 @@ python robust_cnn_model.py
 - **Best for:** Maximum performance
 
 **Output:**
-- `trained_model/robust_cnn/robust_cnn_audio_model.pkl`
-- `trained_model/robust_cnn/robust_cnn_audio_model.h5`
-- `trained_model/robust_cnn/best_model.keras` (best checkpoint)
-- `training_history_robust_cnn.png`
+- `trained_models/robust_cnn/robust_cnn_audio_model.pkl`
+- `trained_models/robust_cnn/robust_cnn_audio_model.h5`
+- `trained_models/robust_cnn/best_model.keras` (best checkpoint)
+- `trained_models/robust_cnn/training_history_robust_cnn.png`
 - `logs/robust_cnn_training.log`
 
-### Option 3: Traditional ML Models
+### Option 3: Traditional ML Models – Multiclass
 
 ```bash
-cd model
-python ml_models.py
+python modeling/models/multiclass/ml_models.py
 ```
 
 **Training Details:**
@@ -120,28 +132,48 @@ python ml_models.py
 - **Best for:** Fast training, interpretability
 
 **Output:**
-- `trained_model/ml_models/ml_model_randomforest.pkl`
-- `trained_model/ml_models/ml_model_svm.pkl`
-- `trained_model/ml_models/ml_model_xgboost.pkl`
-- `trained_model/ml_models/ml_model_gradientboosting.pkl`
-- `trained_model/ml_models/best_ml_model_*.pkl`
-- `trained_model/ml_models/feature_scaler.pkl` (required for predictions)
+- `trained_models/ml_models/ml_model_randomforest.pkl`
+- `trained_models/ml_models/ml_model_svm.pkl`
+- `trained_models/ml_models/ml_model_xgboost.pkl`
+- `trained_models/ml_models/ml_model_gradientboosting.pkl`
+- `trained_models/ml_models/best_ml_model_*.pkl`
+- `trained_models/ml_models/feature_scaler.pkl` (required for predictions)
 - `logs/ml_models_training.log`
+
+### Option 4: Binary classification (Drone vs No-Drone)
+
+**Tiny CNN Binary:**
+```bash
+python modeling/models/binary/tiny_cnn_binary.py
+```
+Output: `trained_models/binary/tiny_cnn/` (e.g. `tiny_cnn_binary_model.pkl`, `.h5`), `logs/tiny_cnn_binary_training.log`
+
+**ML Models Binary:**
+```bash
+python modeling/models/binary/ml_models_binary.py
+```
+Output: `trained_models/binary/ml_models/` (e.g. `ml_model_binary_*.pkl`, `best_ml_model_binary_*.pkl`, `feature_scaler_binary.pkl`), `logs/ml_models_binary_training.log`
 
 ---
 
 ## Testing Models
 
-After training, evaluate model performance:
+After training, run test scripts from the **repo root**. Results are written to `logs/` (e.g. `tiny_cnn_testing.log`, `ml_models_testing.log`).
 
+**Multiclass:**
 ```bash
-cd model/testing
-python test_tiny_model.py      # Test Tiny CNN
-python test_robust_model.py    # Test Robust CNN
-python test_ml_models.py       # Test all ML models
+python modeling/models/multiclass/testing/test_tiny_model.py
+python modeling/models/multiclass/testing/test_robust_model.py
+python modeling/models/multiclass/testing/test_ml_models.py
 ```
 
-**Test Output:**
+**Binary:**
+```bash
+python modeling/models/binary/testing/test_tiny_cnn_binary.py
+python modeling/models/binary/testing/test_ml_models_binary.py
+```
+
+**Test output (in logs and console):**
 - Validation accuracy
 - Confusion matrix
 - Classification report (precision, recall, F1-score)
@@ -161,11 +193,11 @@ import numpy as np
 import pandas as pd
 
 # Load the trained model
-with open('trained_model/tiny_cnn/tiny_cnn_audio_model.pkl', 'rb') as f:
+with open('trained_models/tiny_cnn/tiny_cnn_audio_model.pkl', 'rb') as f:
     model = pickle.load(f)
 
 # Or for Robust CNN:
-# with open('trained_model/robust_cnn/robust_cnn_audio_model.pkl', 'rb') as f:
+# with open('trained_models/robust_cnn/robust_cnn_audio_model.pkl', 'rb') as f:
 #     model = pickle.load(f)
 ```
 
@@ -293,7 +325,7 @@ def predict_audio_cnn(model_path, audio_csv_path, max_frames=862):
 
 # Usage
 result = predict_audio_cnn(
-    'trained_model/tiny_cnn/tiny_cnn_audio_model.pkl',
+    'trained_models/tiny_cnn/tiny_cnn_audio_model.pkl',
     'path/to/your/audio.csv'
 )
 
@@ -314,11 +346,11 @@ import numpy as np
 import pandas as pd
 
 # Load the trained model
-with open('trained_model/ml_models/best_ml_model_xgboost.pkl', 'rb') as f:
+with open('trained_models/ml_models/best_ml_model_xgboost.pkl', 'rb') as f:
     model = pickle.load(f)
 
 # Load the feature scaler (REQUIRED!)
-with open('trained_model/ml_models/feature_scaler.pkl', 'rb') as f:
+with open('trained_models/ml_models/feature_scaler.pkl', 'rb') as f:
     scaler = pickle.load(f)
 ```
 
@@ -464,8 +496,8 @@ def predict_audio_ml(model_path, scaler_path, audio_csv_path):
 
 # Usage
 result = predict_audio_ml(
-    'trained_model/ml_models/best_ml_model_xgboost.pkl',
-    'trained_model/ml_models/feature_scaler.pkl',
+    'trained_models/ml_models/best_ml_model_xgboost.pkl',
+    'trained_models/ml_models/feature_scaler.pkl',
     'path/to/your/audio.csv'
 )
 
@@ -520,7 +552,7 @@ print(result)
 
 ### Model file not found
 - Ensure you've trained the model first
-- Check the correct path: `trained_model/[model_type]/[model_name].pkl`
+- Check the correct path: `trained_models/[model_type]/[model_name].pkl`
 
 ### Shape mismatch errors
 - **CNN:** Ensure your MFCC has 14 coefficients
@@ -554,12 +586,13 @@ pip install -r requirements.txt
 
 ### Model Paths
 ```
-trained_model/
-├── tiny_cnn/tiny_cnn_audio_model.pkl
-├── robust_cnn/robust_cnn_audio_model.pkl
-└── ml_models/
-    ├── best_ml_model_*.pkl
-    └── feature_scaler.pkl (required!)
+trained_models/
+├── tiny_cnn/          # Multiclass Tiny CNN
+├── robust_cnn/        # Multiclass Robust CNN
+├── ml_models/         # Multiclass ML + feature_scaler.pkl (required!)
+└── binary/
+    ├── tiny_cnn/      # Binary Tiny CNN
+    └── ml_models/     # Binary ML + feature_scaler_binary.pkl (required!)
 ```
 
 ### Minimum Requirements

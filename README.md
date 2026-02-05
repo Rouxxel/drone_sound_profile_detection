@@ -30,42 +30,44 @@ All models use MFCC (Mel-Frequency Cepstral Coefficients) features extracted fro
 
 ```
 drone_sound_profile_detection/
+├── main.py                          # Full pipeline: download → convert → EDA → train → test
 ├── datasets/
-│   ├── audios/                      # Raw audio files (.wav)
-│   ├── converted_csv/               # MFCC features in CSV format
-│   │   ├── DRONE_*.csv             # 30 drone audio samples
-│   │   ├── HELICOPTER_*.csv        # 30 helicopter audio samples
-│   │   └── BACKGROUND_*.csv        # 30 background noise samples
-│   └── wav_to_csv_converter.py     # Script to convert WAV to MFCC CSV
-├── model/
-│   ├── multiclass/                 # 3-class classification (Drone, Helicopter, Background)
-│   │   ├── tiny_cnn_model.py
-│   │   ├── robust_cnn_model.py
-│   │   ├── ml_models.py
-│   │   └── testing/
-│   ├── binary/                     # 2-class classification (Drone vs No-Drone)
-│   │   ├── tiny_cnn_binary.py
-│   │   ├── ml_models_binary.py
-│   │   └── testing/
-│   │       ├── test_tiny_cnn_binary.py
-│   │       └── test_ml_models_binary.py
-│   └── predict_single_audio.py     # Single audio prediction script
-├── trained_model/                   # Saved trained models (created after training)
-│   ├── multiclass/                 # 3-class models
-│   │   ├── tiny_cnn/
-│   │   ├── robust_cnn/
-│   │   └── ml_models/
-│   └── binary/                     # 2-class models (Drone vs No-Drone)
-│       ├── tiny_cnn/
-│       │   ├── tiny_cnn_binary_model.pkl
-│       │   └── tiny_cnn_binary_model.h5
-│       └── ml_models/
-│           ├── ml_model_binary_*.pkl
-│           ├── best_ml_model_binary_*.pkl
-│           └── feature_scaler_binary.pkl
+│   ├── audios/                      # Raw audio files (.wav), created by data_kaggle_download.py
+│   ├── converted_csv/               # MFCC CSV files, created by audio_to_csv_converter.py
+│   ├── data_kaggle_download.py      # Download dataset from Kaggle, copy .wav into audios/
+│   └── audio_to_csv_converter.py    # Convert WAV in audios/ to MFCC CSV in converted_csv/
+├── modeling/
+│   ├── EDA/                         # Exploratory data analysis
+│   │   ├── plot_converted_csv.py    # MFCC heatmap + RMS plot per CSV
+│   │   ├── eda_summary_report.py    # Dataset summary, class/duration/PCA plots, report
+│   │   └── plots/                   # Per-file plots (created by plot_converted_csv.py)
+│   ├── models/
+│   │   ├── multiclass/              # 3-class: Drone, Helicopter, Background
+│   │   │   ├── tiny_cnn_model.py
+│   │   │   ├── robust_cnn_model.py
+│   │   │   ├── ml_models.py
+│   │   │   └── testing/
+│   │   │       ├── test_tiny_model.py
+│   │   │       ├── test_robust_model.py
+│   │   │       └── test_ml_models.py
+│   │   └── binary/                  # 2-class: Drone vs No-Drone
+│   │       ├── tiny_cnn_binary.py
+│   │       ├── ml_models_binary.py
+│   │       └── testing/
+│   │           ├── test_tiny_cnn_binary.py
+│   │           └── test_ml_models_binary.py
+│   ├── documentation/               # USAGE_GUIDE.md and other docs
+│   └── utils/                       # e.g. pycache_n_logs_deleter.py
+├── trained_models/                  # Saved models (created when training; only if not exists)
+│   ├── tiny_cnn/                    # Multiclass Tiny CNN
+│   ├── robust_cnn/                  # Multiclass Robust CNN
+│   ├── ml_models/                   # Multiclass ML (RF, SVM, XGBoost, GB)
+│   └── binary/
+│       ├── tiny_cnn/                # Binary Tiny CNN
+│       └── ml_models/               # Binary ML + feature_scaler_binary.pkl
 ├── logs/                            # Training and testing logs
-├── requirements.txt                 # Python dependencies
-└── README.md                        # This file
+├── requirements.txt
+└── README.md
 ```
 
 ## Dataset
@@ -126,104 +128,101 @@ pip install -r requirements.txt
 
 ## Usage
 
-### 1. Convert Audio to MFCC Features (if needed)
+### Option A: Run the full pipeline (recommended)
 
-If you have raw audio files, convert them to MFCC CSV format:
-
-```bash
-cd datasets
-python wav_to_csv_converter.py
-```
-
-This will process all `.wav` files in the `audios/` folder and save MFCC features to `converted_csv/`.
-
-### 2. Train Models
-
-Choose between **Multiclass** (3 classes) or **Binary** (Drone vs No-Drone) classification:
-
-#### Multiclass Classification (Drone, Helicopter, Background)
+From the repo root, run everything in order (download → convert → EDA → train all → test all):
 
 ```bash
-cd model/multiclass
-
-# Option A: Tiny CNN
-python tiny_cnn_model.py
-
-# Option B: Robust CNN
-python robust_cnn_model.py
-
-# Option C: ML Models
-python ml_models.py
+python main.py
 ```
 
-#### Binary Classification (Drone vs No-Drone)
+This runs: dataset download, CSV conversion, both EDA scripts (concurrent), all 5 training scripts (concurrent), then all 5 test scripts (concurrent, after training). Test results are written to `logs/`.
+
+### Option B: Run steps manually
+
+#### 1. Download data and convert to MFCC CSV
 
 ```bash
-cd model/binary
+# Download Kaggle dataset and copy .wav files into datasets/audios/
+python datasets/data_kaggle_download.py
 
-# Option A: Tiny CNN Binary
-python tiny_cnn_binary.py
-
-# Option B: ML Models Binary
-python ml_models_binary.py
+# Convert all .wav in audios/ to MFCC CSV in converted_csv/
+python datasets/audio_to_csv_converter.py
 ```
 
-**Binary classification is recommended when:**
-- You only need to detect drone presence
-- You want higher accuracy (simpler problem)
-- You need faster inference
+Scripts use paths relative to their location, so you can run from the repo root.
 
-### 3. Test Models
+#### 2. (Optional) EDA
 
-After training, evaluate model performance:
-
-#### Multiclass Models
 ```bash
-cd model/multiclass/testing
-python test_tiny_model.py      # Test tiny CNN
-python test_robust_model.py    # Test robust CNN
-python test_ml_models.py       # Test all ML models
+python modeling/EDA/plot_converted_csv.py       # Per-file MFCC + RMS plots → modeling/EDA/plots/
+python modeling/EDA/eda_summary_report.py       # Summary report → modeling/EDA/eda_report/
 ```
 
-#### Binary Models
+#### 3. Train models
+
+All paths are relative to the repo root; run from anywhere (e.g. repo root). Models and logs go to `trained_models/` and `logs/` at repo root.
+
+**Multiclass (Drone, Helicopter, Background):**
+
 ```bash
-cd model/binary/testing
-python test_tiny_cnn_binary.py      # Test binary CNN
-python test_ml_models_binary.py     # Test binary ML models
+python modeling/models/multiclass/tiny_cnn_model.py
+python modeling/models/multiclass/robust_cnn_model.py
+python modeling/models/multiclass/ml_models.py
 ```
 
-Each test script provides:
-- Validation accuracy
-- Confusion matrix
-- Classification report (precision, recall, F1-score)
-- Per-class accuracy breakdown
+**Binary (Drone vs No-Drone):**
+
+```bash
+python modeling/models/binary/tiny_cnn_binary.py
+python modeling/models/binary/ml_models_binary.py
+```
+
+**Binary classification is recommended when** you only need to detect drone presence, want higher accuracy, or need faster inference.
+
+#### 4. Test models
+
+Test scripts read from `trained_models/` and write results to `logs/`:
+
+**Multiclass:**
+```bash
+python modeling/models/multiclass/testing/test_tiny_model.py
+python modeling/models/multiclass/testing/test_robust_model.py
+python modeling/models/multiclass/testing/test_ml_models.py
+```
+
+**Binary:**
+```bash
+python modeling/models/binary/testing/test_tiny_cnn_binary.py
+python modeling/models/binary/testing/test_ml_models_binary.py
+```
+
+Each test script prints and logs to `logs/*.log`: validation accuracy, confusion matrix, classification report, and per-class accuracy.
 
 ## Model Outputs
 
-### CNN Models
-Saved in multiple formats:
-- **PKL format**: Python pickle format for easy loading
-- **H5 format**: Keras format for compatibility
-- **KERAS format**: Best model checkpoint (Robust CNN only)
+All outputs are under `trained_models/` at the repo root (folders are created only if they do not exist).
 
-### ML Models
-- Individual model files: `ml_model_randomforest.pkl`, `ml_model_svm.pkl`, etc.
-- Best model: `best_ml_model_*.pkl`
-- Feature scaler: `feature_scaler.pkl` (required for predictions)
+### CNN models (multiclass)
+- **tiny_cnn/**: `tiny_cnn_audio_model.pkl`, `tiny_cnn_audio_model.h5`, `training_history_tiny_cnn.png`
+- **robust_cnn/**: `robust_cnn_audio_model.pkl`, `robust_cnn_audio_model.h5`, `best_model.keras`, `training_history_robust_cnn.png`
+
+### CNN models (binary)
+- **binary/tiny_cnn/**: `tiny_cnn_binary_model.pkl`, `tiny_cnn_binary_model.h5`, `training_history_tiny_cnn_binary.png`
+
+### ML models (multiclass)
+- **ml_models/**: `ml_model_randomforest.pkl`, `ml_model_svm.pkl`, `ml_model_xgboost.pkl`, `ml_model_gradientboosting.pkl`, `best_ml_model_*.pkl`, `feature_scaler.pkl` (required for predictions)
+
+### ML models (binary)
+- **binary/ml_models/**: `ml_model_binary_*.pkl`, `best_ml_model_binary_*.pkl`, `feature_scaler_binary.pkl` (required for predictions)
 
 ## Results
 
-After training, you'll find:
-- **Training logs**: `logs/tiny_cnn_training.log`
-- **Testing logs**: `logs/tiny_cnn_testing.log`
-- **Training plot**: `training_history_tiny_cnn.png` (shows accuracy and loss curves)
-- **Model files**: `trained_model/` directory
-
-The test script provides:
-- Overall validation accuracy
-- Confusion matrix
-- Per-class precision, recall, and F1-score
-- Per-class accuracy breakdown
+After training and testing:
+- **Training logs**: `logs/tiny_cnn_training.log`, `logs/ml_models_training.log`, `logs/robust_cnn_training.log`, and binary equivalents
+- **Testing logs**: `logs/tiny_cnn_testing.log`, `logs/ml_models_testing.log`, `logs/robust_cnn_testing.log`, and binary equivalents (accuracy, confusion matrix, classification report)
+- **Training plots**: e.g. `trained_models/tiny_cnn/training_history_tiny_cnn.png`
+- **Model files**: `trained_models/` (see Model Outputs above)
 
 Actual Tested models
 # Drone Sound Profile Detection: Model Comparison
