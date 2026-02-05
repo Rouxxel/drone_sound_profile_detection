@@ -19,7 +19,7 @@ __pycache__/
 modeling/EDA/eda_report*
 
 # Model files and training outputs
-trained_model/
+trained_models/
 logs/
 
 # Distribution / packaging
