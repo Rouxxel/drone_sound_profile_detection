@@ -35,7 +35,7 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 SCRIPT_DIR = Path(__file__).resolve().parent
 REPO_ROOT = SCRIPT_DIR.parent.parent.parent
 CSV_DIR = REPO_ROOT / "datasets" / "converted_csv"
-TRAINED_MODEL_ROOT = REPO_ROOT / "trained_model"
+TRAINED_MODEL_ROOT = REPO_ROOT / "trained_models"
 LOGS_DIR = REPO_ROOT / "logs"
 
 # -------------------------------------------------------------------------
@@ -307,7 +307,7 @@ def main():
     logger.info("Starting Robust CNN training...")
     
     # Load dataset
-    csv_dir = "../../datasets/converted_csv"
+    csv_dir = str(CSV_DIR)
     X_train_raw, y_train, X_val_raw, y_val = load_dataset(csv_dir)
     
     # Preprocess
@@ -324,7 +324,7 @@ def main():
     # Build model
     model = build_robust_cnn(input_shape=X_train.shape[1:], num_classes=3)
     
-    # Create trained_model/robust_cnn directory at repo root
+    # Create trained_models/robust_cnn at repo root (only if not exists)
     model_dir = TRAINED_MODEL_ROOT / "robust_cnn"
     model_dir.mkdir(parents=True, exist_ok=True)
     

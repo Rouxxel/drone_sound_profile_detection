@@ -25,7 +25,7 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 SCRIPT_DIR = Path(__file__).resolve().parent
 REPO_ROOT = SCRIPT_DIR.parent.parent.parent
 CSV_DIR = REPO_ROOT / "datasets" / "converted_csv"
-TRAINED_MODEL_ROOT = REPO_ROOT / "trained_model"
+TRAINED_MODEL_ROOT = REPO_ROOT / "trained_models"
 LOGS_DIR = REPO_ROOT / "logs"
 
 class CustomFormatter(logging.Formatter):
@@ -167,7 +167,7 @@ def main():
                         batch_size=8,
                         verbose=1).history
 
-    # Create trained_model/binary/tiny_cnn directory at repo root
+    # Create trained_models/binary/tiny_cnn at repo root (only if not exists)
     model_dir = TRAINED_MODEL_ROOT / "binary" / "tiny_cnn"
     model_dir.mkdir(parents=True, exist_ok=True)
     

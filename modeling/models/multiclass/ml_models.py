@@ -32,7 +32,7 @@ import xgboost as xgb
 SCRIPT_DIR = Path(__file__).resolve().parent
 REPO_ROOT = SCRIPT_DIR.parent.parent.parent
 CSV_DIR = REPO_ROOT / "datasets" / "converted_csv"
-TRAINED_MODEL_ROOT = REPO_ROOT / "trained_model"
+TRAINED_MODEL_ROOT = REPO_ROOT / "trained_models"
 LOGS_DIR = REPO_ROOT / "logs"
 
 # -------------------------------------------------------------------------
@@ -332,7 +332,7 @@ def main():
     best_result = max(results, key=lambda x: x['accuracy'])
     logger.info(f"\nBest Model: {best_result['name']} with {best_result['accuracy']*100:.2f}% accuracy")
     
-    # Create trained_model/ml_models directory at repo root
+    # Create trained_models/ml_models at repo root (only if not exists)
     model_dir = TRAINED_MODEL_ROOT / "ml_models"
     model_dir.mkdir(parents=True, exist_ok=True)
     
