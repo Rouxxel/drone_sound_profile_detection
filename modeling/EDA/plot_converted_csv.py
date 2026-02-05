@@ -1,6 +1,6 @@
 """
 Create MFCC heatmap + RMS plots for each CSV in datasets/converted_csv/,
-and save them in EDA/plots/. Run from any directory; paths are relative to this script.
+and save them in modeling/EDA/plots/. Run from any directory; paths are relative to this script.
 """
 
 import os
@@ -11,10 +11,12 @@ import matplotlib.pyplot as plt
 import librosa
 
 # ---------------- SETTINGS ---------------- #
+# Script lives in modeling/EDA/; datasets/ is at repo root (two levels up)
 SCRIPT_DIR = Path(__file__).resolve().parent
-CSV_FOLDER = SCRIPT_DIR.parent / "datasets" / "converted_csv"
+REPO_ROOT = SCRIPT_DIR.parent.parent
+CSV_FOLDER = REPO_ROOT / "datasets" / "converted_csv"
 PLOTS_DIR = SCRIPT_DIR / "plots"
-AUDIOS_FOLDER = SCRIPT_DIR.parent / "datasets" / "audios"
+AUDIOS_FOLDER = REPO_ROOT / "datasets" / "audios"
 
 samp_rate = 44100
 hop_length = 512
