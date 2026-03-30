@@ -145,7 +145,7 @@ These harmonic structures are essential for reliable drone detection.
 This is why academic drone-detection systems overwhelmingly use:
 
 - **Mel-Spectrograms**  
-- **STFT Spectrograms**  
+- **STFT Spectrograms (Short Time Fourier Transform)**  
 - **CQT (Constant-Q Transform)**  
 
 ---
