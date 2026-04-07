@@ -2,6 +2,9 @@
 Convert audio files in audios/ to MFCC CSV files in converted_csv/.
 Both folders are at the same level (sibling to this script in datasets/).
 Run from any directory; paths are relative to this script's location.
+
+CSV outputs Column Mapping:
+- [0-13]: MFCCs (14 coefficients)
 """
 
 import os
