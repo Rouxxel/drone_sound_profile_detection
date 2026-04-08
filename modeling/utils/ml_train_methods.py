@@ -55,7 +55,7 @@ def load_dataset(
         logger.info("Binary Classification: DRONE (1) vs NO_DRONE (0)")
     else:
         data_by_class = {0: [], 1: [], 2: []} # 0: BG, 1: HELI, 2: DRONE
-        logger.info("Binary Classification: DRONE (2) vs HELICOPTER (1) vs BG (0)")
+        logger.info("Multiclass Classification: DRONE (2) vs HELICOPTER (1) vs BG (0)")
 
     for file in csv_path.glob("*.csv"):
         name = file.stem.upper()
