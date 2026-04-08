@@ -62,9 +62,6 @@ def get_logger(logger_name: str, log_filename: str | None = None) -> logging.Log
     console_handler.setFormatter(_LOG_FORMAT)
     logger.addHandler(console_handler)
 
-    logger.info("Log handler successfully set")
-    logger.info(f"All logs are being saved in {log_path}")
-
     return logger
 
 
