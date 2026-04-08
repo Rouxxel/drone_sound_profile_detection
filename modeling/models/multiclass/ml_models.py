@@ -336,7 +336,7 @@ def main():
     X_val = prepare_ml_features(X_val_raw)
     
     logger.info(f"Feature vector size: {X_train.shape[1]}")
-    logger.info(f"Feature vector length: {X_train.shape[0]}")
+    logger.info(f"Feature vector length: {X_train.shape[1]}")
     assert X_train.shape[1] == X_val.shape[1], "Feature dimensions mismatch!"
     
     # Standardize features
