@@ -20,49 +20,52 @@ OUTPUT_FOLDER = SCRIPT_DIR / "converted_csv"
 
 FILE_TYPES = (".wav", ".mp3", ".flac", ".ogg", ".m4a")
 
-# Create converted_csv folder if it doesn't exist
-OUTPUT_FOLDER.mkdir(exist_ok=True)
+def run_converion():
+    if not AUDIO_FOLDER.exists():
+        print(f"!!! Audio folder not found: {AUDIO_FOLDER}")
+        print("!!! Run data_kaggle_download.py first to create audios/ with .wav files.")
+        exit(1)
+    
+    # Create converted_csv folder if it doesn't exist
+    OUTPUT_FOLDER.mkdir(exist_ok=True)
+    print(f"-Reading from: {AUDIO_FOLDER}")
+    print(f"--Saving to:   {OUTPUT_FOLDER}\n")
 
-if not AUDIO_FOLDER.exists():
-    print(f"❌ Audio folder not found: {AUDIO_FOLDER}")
-    print("   Run data_kaggle_download.py first to create audios/ with .wav files.")
-    exit(1)
+    processed = 0
+    for filename in sorted(os.listdir(AUDIO_FOLDER)):
+        if not filename.lower().endswith(FILE_TYPES):
+            continue
 
-print(f"📂 Reading from: {AUDIO_FOLDER}")
-print(f"📂 Saving to:   {OUTPUT_FOLDER}\n")
+        csv_filename = Path(filename).stem + ".csv"
+        csv_path = OUTPUT_FOLDER / csv_filename
 
-processed = 0
-for filename in sorted(os.listdir(AUDIO_FOLDER)):
-    if not filename.lower().endswith(FILE_TYPES):
-        continue
+        if csv_path.exists():
+            print(f"Skipping {filename} -> {csv_filename} already exists.")
+            continue
 
-    csv_filename = Path(filename).stem + ".csv"
-    csv_path = OUTPUT_FOLDER / csv_filename
+        file_path = AUDIO_FOLDER / filename
+        print(f"--Processing {filename}...")
 
-    if csv_path.exists():
-        print(f"Skipping {filename} -> {csv_filename} already exists.")
-        continue
+        # Load audio
+        y, sr = librosa.load(str(file_path), sr=None)
 
-    file_path = AUDIO_FOLDER / filename
-    print(f"Processing {filename}...")
+        # Compute MFCCs (14 coefficients recommended for drones)
+        mfcc = librosa.feature.mfcc(y=y, sr=sr, n_mfcc=14)
 
-    # Load audio
-    y, sr = librosa.load(str(file_path), sr=None)
+        # Normalize MFCCs
+        mfcc = (mfcc - np.mean(mfcc)) / np.std(mfcc)
 
-    # Compute MFCCs (14 coefficients recommended for drones)
-    mfcc = librosa.feature.mfcc(y=y, sr=sr, n_mfcc=14)
+        # Transpose: rows = time frames, columns = MFCC coefficients
+        mfcc = mfcc.T
 
-    # Normalize MFCCs
-    mfcc = (mfcc - np.mean(mfcc)) / np.std(mfcc)
+        # Save as CSV
+        mfcc_df = pd.DataFrame(mfcc)
+        mfcc_df.to_csv(csv_path, index=False)
 
-    # Transpose: rows = time frames, columns = MFCC coefficients
-    mfcc = mfcc.T
+        print(f"---Saved {csv_filename}")
+        processed += 1
 
-    # Save as CSV
-    mfcc_df = pd.DataFrame(mfcc)
-    mfcc_df.to_csv(csv_path, index=False)
+    print(f"\nDone. Processed {processed} new file(s).")
 
-    print(f"  Saved {csv_filename}")
-    processed += 1
-
-print(f"\n✅ Done. Processed {processed} new file(s).")
+if __name__ == "__main__":
+    run_converion()
