@@ -1,0 +1,11 @@
+{
+    "audio_converters":{
+        "input_file_extensions":[".wav", ".mp3", ".flac", ".ogg", ".m4a"],
+        "output_file_extensions":".csv",
+        "trad_ml_models":{
+            "output_folder_str":"trad_ml_csv",
+            "n_mfcc":14,
+            "include_hnr": true
+        }
+    }
+}
