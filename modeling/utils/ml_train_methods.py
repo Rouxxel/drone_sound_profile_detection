@@ -10,13 +10,12 @@ import numpy as np
 import pandas as pd
 from sklearn.model_selection import train_test_split
 
-#custom logger
-SCRIPT_DIR = Path(__file__).resolve().parent #multiclass/
+SCRIPT_DIR = Path(__file__).resolve().parent #utils/
 REPO_ROOT = SCRIPT_DIR.parent.parent.parent #root/
 
 #custom logger
-sys.path.append(str(REPO_ROOT))
-from modeling.utils.custom_logger import get_logger
+#sys.path.append(str(REPO_ROOT))
+from custom_logger import get_logger
 logger = get_logger("ml_models_logger", "ml_models_training.log")
 
 # -------------------------------------------------------------------------
@@ -178,10 +177,45 @@ def prepare_ml_features(X: np.ndarray) -> np.ndarray:
     return np.array(features)
 
 
-# def main():
-#     load_dataset()
-#     extract_statistical_features()
-#     prepare_ml_features()
+# -------------------------------------------------------------------------
+# Internal verification tests (executed only when run directly)
+# -------------------------------------------------------------------------
+if __name__ == "__main__":
+    print("Running internal tests for feature extractor...")
+    print(REPO_ROOT)
 
-# if __name__ == "__main__":
-#     main()
+    # ---------------------
+    # Property: vector length
+    # ---------------------
+    n_mfcc = 20
+    expected_len = 9 * n_mfcc
+    for frames in [1, 5, 50, 100]:
+        mfcc = np.random.randn(frames, n_mfcc).astype(np.float32)
+        vec = extract_statistical_features(mfcc)
+        assert len(vec) == expected_len, f"Length mismatch! Got {len(vec)}"
+    print("Property: Feature vector length OK")
+
+    # ---------------------
+    # Property: Determinism
+    # ---------------------
+    mfcc = np.random.randn(60, n_mfcc).astype(np.float32)
+    v1 = extract_statistical_features(mfcc)
+    v2 = extract_statistical_features(mfcc)
+    assert np.allclose(v1, v2), "Extractor is NOT deterministic!"
+    print("Property: Determinism OK")
+
+    # ---------------------
+    # Property: NaN / Inf sanitization
+    # ---------------------
+    mfcc = np.array([
+        [np.nan, np.inf, -np.inf],
+        [1.0, 2.0, 3.0]
+    ], dtype=np.float32)
+
+    v = extract_statistical_features(mfcc)
+    assert not np.isnan(v).any(), "NaNs found in output vector!"
+    assert not np.isinf(v).any(), "Infs found in output vector!"
+    print("Property 7: NaN/Inf sanitization OK")
+
+    print("All internal ML utils tests passed.")
+
