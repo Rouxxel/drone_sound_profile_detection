@@ -85,14 +85,14 @@ def extract_features(y, sr, n_mfcc=N_MFCC, include_hnr=INCLUDE_HNR):
 
 def run_conversion():
     if not AUDIO_FOLDER.exists(): #Small check
-        print(f"Audio folder not found: {AUDIO_FOLDER}")
-        print("Run data_kaggle_download.py first to extract audios/ with .wav files.")
+        print(f"!!! Audio folder not found: {AUDIO_FOLDER}")
+        print("!!! Run data_kaggle_download.py first to extract audios/ with .wav files.")
         return
 
     # Create converted_csv folder
     OUTPUT_FOLDER.mkdir(exist_ok=True)
-    print(f"Reading from: {AUDIO_FOLDER}")
-    print(f"Saving to:   {OUTPUT_FOLDER}\n")
+    print(f"-Reading from: {AUDIO_FOLDER}")
+    print(f"--Saving to:   {OUTPUT_FOLDER}\n")
 
     processed = 0
     for filename in sorted(os.listdir(AUDIO_FOLDER)):
@@ -103,11 +103,11 @@ def run_conversion():
         csv_path = OUTPUT_FOLDER / csv_filename #save in new folder
 
         if csv_path.exists():
-            print(f"Skipping {filename} -> {csv_filename} already exists.")
+            print(f"!!! Skipping {filename} -> {csv_filename} already exists.")
             continue
 
         file_path = AUDIO_FOLDER / filename
-        print(f"Processing {filename}...")
+        print(f"--Processing {filename}...")
         try:
             # Load audio
             y, sr = librosa.load(str(file_path), sr=None)
@@ -117,10 +117,10 @@ def run_conversion():
 
             # Save as CSV
             feature_df.to_csv(csv_path, index=False)
-            print(f"  Saved {OUTPUT_FOLDER}/{csv_filename}")
+            print(f"---Saved {OUTPUT_FOLDER}/{csv_filename}")
             processed += 1
         except Exception as e:
-            print(f"Error processing {filename}: {e}")
+            print(f"!!! Error processing {filename}: {e}")
 
     print(f"\nDone. Processed {processed} new file(s).")
 
