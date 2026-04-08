@@ -29,6 +29,9 @@ from modeling.utils.custom_logger import get_logger
 from modeling.utils.ml_train_methods import load_dataset, extract_statistical_features, prepare_ml_features
 logger = get_logger("ml_binary_test_logger", "ml_models_binary_testing.log")
 
+# -------------------------------------------------------------------------
+# Model Testing
+# -------------------------------------------------------------------------
 def test_model(model, model_name: str, X_val, y_val, class_names: Dict):
     logger.info(f"{'='*60}")
     logger.info(f"Testing {model_name}")
