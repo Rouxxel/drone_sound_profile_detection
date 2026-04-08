@@ -21,8 +21,8 @@ import librosa
 import numpy as np
 import pandas as pd
 
-# Paths: same level as this script (datasets/)
-SCRIPT_DIR = Path(__file__).resolve().parent
+# Paths: same level as this script
+SCRIPT_DIR = Path(__file__).resolve().parent #datasets/
 AUDIO_FOLDER = SCRIPT_DIR / "audios"
 OUTPUT_FOLDER = SCRIPT_DIR / "trad_ml_csv"
 
