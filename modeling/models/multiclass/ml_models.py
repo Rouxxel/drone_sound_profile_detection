@@ -42,9 +42,11 @@ logger = get_logger("ml_models_logger", "ml_models_training.log")
 # Configuration
 CSV_DIR = REPO_ROOT / "datasets" / config["audio_converters"]["trad_ml_models"]["output_folder_str"]
 TRAINED_MODEL_ROOT = REPO_ROOT / config["ml_models"]["output_folder_str"]
+SPECIFIC_FOLDER = TRAINED_MODEL_ROOT / config["ml_models"]["multiclass"]["general"]["folder"]
 TEST_SPLIT=config["ml_models"]["multiclass"]["general"]["test_split"]
 SHUFFLE=config["ml_models"]["multiclass"]["general"]["shuffle"]
 RANDOM_STATE=config["ml_models"]["multiclass"]["general"]["random_state"]
+CLASSES=config["ml_models"]["multiclass"]["general"]["classes"]
 
 #Random forest
 RF_N_ESTIMATORS=config["ml_models"]["multiclass"]["random_forest"]["n_estimators"]
@@ -58,6 +60,7 @@ RF_VERBOSE=config["ml_models"]["multiclass"]["random_forest"]["verbose"]
 #SVM
 GAMMA=config["ml_models"]["multiclass"]["svm"]["gamma"]
 SVM_C=config["ml_models"]["multiclass"]["svm"]["c"]
+PROBABILITY=config["ml_models"]["multiclass"]["svm"]["probability"]
 KERNEL=config["ml_models"]["multiclass"]["svm"]["kernel"]
 SVM_RNDM_STATE=config["ml_models"]["multiclass"]["svm"]["random_state"]
 SVM_VERBOSE=config["ml_models"]["multiclass"]["svm"]["verbose"]
@@ -129,6 +132,7 @@ def train_svm(X_train, y_train, X_val, y_val) -> Dict:
     model = SVC(
         kernel=KERNEL,
         C=SVM_C,
+        probability=PROBABILITY,
         gamma=GAMMA,
         random_state=SVM_RNDM_STATE,
         verbose=SVM_VERBOSE
@@ -218,7 +222,7 @@ def main():
     
     # Load dataset
     csv_dir = str(CSV_DIR)
-    X_train_raw, y_train, X_val_raw, y_val = load_dataset(csv_dir=csv_dir,test_split=TEST_SPLIT,shffl=SHUFFLE, rand_state=RANDOM_STATE)
+    X_train_raw, y_train, X_val_raw, y_val = load_dataset(csv_dir=csv_dir,test_split=TEST_SPLIT,shffl=SHUFFLE, rand_state=RANDOM_STATE, is_binary=False)
     
     # Extract features
     X_train = prepare_ml_features(X_train_raw)
@@ -255,7 +259,7 @@ def main():
     logger.info(f"Best Model: {best_result['name']} with {best_result['accuracy']*100:.2f}% accuracy")
     
     # Create trained_models/ml_models at repo root (only if not exists)
-    model_dir = TRAINED_MODEL_ROOT / "ml_models"
+    model_dir = TRAINED_MODEL_ROOT / SPECIFIC_FOLDER
     model_dir.mkdir(parents=True, exist_ok=True)
     
     best_model_path = model_dir / f"best_ml_model_{best_result['name'].lower()}.pkl"
@@ -280,13 +284,12 @@ def main():
     logger.info(f"DETAILED REPORT FOR {best_result['name']}")
     logger.info("="*60)
     
-    class_names = ['BACKGROUND', 'HELICOPTER', 'DRONE']
     logger.info("Confusion Matrix:")
     cm = confusion_matrix(y_val, best_result['predictions'])
     logger.info(f"\n{cm}")
     
     logger.info("Classification Report:")
-    report = classification_report(y_val, best_result['predictions'], target_names=class_names)
+    report = classification_report(y_val, best_result['predictions'], target_names=CLASSES)
     logger.info(f"\n{report}")
     
     logger.info("Training completed successfully!")

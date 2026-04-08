@@ -12,7 +12,7 @@ Models: Random Forest, SVM, XGBoost, Gradient Boosting
 
 import os
 import pickle
-import logging
+import sys
 from pathlib import Path
 from typing import Tuple, Dict
 import numpy as np
@@ -24,99 +24,81 @@ from sklearn.metrics import classification_report, confusion_matrix, accuracy_sc
 from sklearn.preprocessing import StandardScaler
 import xgboost as xgb
 
+# -------------------------------------------------------------------------
 # Paths (script in modeling/models/binary/; repo root = 3 levels up)
-SCRIPT_DIR = Path(__file__).resolve().parent
-REPO_ROOT = SCRIPT_DIR.parent.parent.parent
-CSV_DIR = REPO_ROOT / "datasets" / "converted_csv"
-TRAINED_MODEL_ROOT = REPO_ROOT / "trained_models"
+# -------------------------------------------------------------------------
+SCRIPT_DIR = Path(__file__).resolve().parent #binary/
+REPO_ROOT = SCRIPT_DIR.parent.parent.parent #root/
 
-# Logging (shared format; log file: logs/ml_models_binary_training.log)
+#custom logger
+sys.path.append(str(REPO_ROOT))
 from modeling.utils.custom_logger import get_logger
+from configuration.config_loader import config
+from modeling.utils.ml_train_methods import extract_statistical_features, load_dataset, prepare_ml_features
 logger = get_logger("ml_models_binary_logger", "ml_models_binary_training.log")
 
-def load_dataset(csv_dir: str) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-    csv_path = Path(csv_dir)
-    assert csv_path.exists(), f"CSV directory not found: {csv_dir}"
+# Configuration
+CSV_DIR = REPO_ROOT / "datasets" / config["audio_converters"]["trad_ml_models"]["output_folder_str"]
+TRAINED_MODEL_ROOT = REPO_ROOT / config["ml_models"]["output_folder_str"]
+SPECIFIC_FOLDER = TRAINED_MODEL_ROOT / config["ml_models"]["binary"]["general"]["folder"]
+TEST_SPLIT=config["ml_models"]["binary"]["general"]["test_split"]
+SHUFFLE=config["ml_models"]["binary"]["general"]["shuffle"]
+RANDOM_STATE=config["ml_models"]["binary"]["general"]["random_state"]
 
-    logger.info(f"Loading dataset from {csv_path}")
-    logger.info("Binary Classification: DRONE (1) vs NO_DRONE (0)")
+#Random forest
+RF_N_ESTIMATORS=config["ml_models"]["binary"]["random_forest"]["n_estimators"]
+RF_MAX_DEPTH=config["ml_models"]["binary"]["random_forest"]["max_depth"]
+MIN_SAMP_SPLT=config["ml_models"]["binary"]["random_forest"]["min_samples_split"]
+MIN_SAMP_LEAF=config["ml_models"]["binary"]["random_forest"]["min_samples_leaf"]
+RF_RNDM_STATE=config["ml_models"]["binary"]["random_forest"]["random_state"]
+RF_N_JOBS=config["ml_models"]["binary"]["random_forest"]["n_jobs"]
+RF_VERBOSE=config["ml_models"]["binary"]["random_forest"]["verbose"]
 
-    data_by_class = {0: [], 1: []}  # 0: NO_DRONE, 1: DRONE
+#SVM
+GAMMA=config["ml_models"]["binary"]["svm"]["gamma"]
+SVM_C=config["ml_models"]["binary"]["svm"]["c"]
+PROBABILITY=config["ml_models"]["binary"]["svm"]["probability"]   
+KERNEL=config["ml_models"]["binary"]["svm"]["kernel"]
+SVM_RNDM_STATE=config["ml_models"]["binary"]["svm"]["random_state"]
+SVM_VERBOSE=config["ml_models"]["binary"]["svm"]["verbose"]
 
-    for file in csv_path.glob("*.csv"):
-        name = file.stem.upper()
-        if name.startswith("DRONE"):
-            label = 1  # DRONE
-        elif name.startswith("HELICOPTER") or name.startswith("BACKGROUND"):
-            label = 0  # NO_DRONE
-        else:
-            logger.warning(f"Skipping unknown file: {file.name}")
-            continue
-        mfcc = pd.read_csv(file).values.astype(np.float32)
-        data_by_class[label].append(mfcc)
+#XGboost
+XG_N_ESTIMATORS=config["ml_models"]["binary"]["xgboost"]["n_estimators"]
+XG_MAX_DEPTH=config["ml_models"]["binary"]["xgboost"]["max_depth"]
+XG_LEARNING_RATE=config["ml_models"]["binary"]["xgboost"]["learning_rate"]
+XG_SUBSAMPLE=config["ml_models"]["binary"]["xgboost"]["subsample"]
+XG_COLSAMPLE_BYTREE=config["ml_models"]["binary"]["xgboost"]["colsample_bytree"]
+XG_RNDM_STATE=config["ml_models"]["binary"]["xgboost"]["random_state"]
+XG_N_JOBS=config["ml_models"]["binary"]["xgboost"]["n_jobs"]
+XG_VERBOSE=config["ml_models"]["binary"]["xgboost"]["verbose"]
 
-    X_train, y_train, X_val, y_val = [], [], [], []
-    for label, samples in data_by_class.items():
-        if len(samples) == 0:
-            logger.error(f"No samples found for class {label}.")
-            continue
-        train_split, val_split = train_test_split(samples, test_size=0.2, shuffle=True, random_state=42)
-        X_train.extend(train_split)
-        y_train.extend([label]*len(train_split))
-        X_val.extend(val_split)
-        y_val.extend([label]*len(val_split))
+#Gradient boosting
+GB_N_ESTIMATORS=config["ml_models"]["binary"]["gradient"]["n_estimators"]
+GB_MAX_DEPTH=config["ml_models"]["binary"]["gradient"]["max_depth"]
+GB_LEARNING_RATE=config["ml_models"]["binary"]["gradient"]["learning_rate"]
+GB_SUBSAMPLE=config["ml_models"]["binary"]["gradient"]["subsample"]
+GB_RNDM_STATE=config["ml_models"]["binary"]["gradient"]["random_state"]
+GB_VERBOSE=config["ml_models"]["binary"]["gradient"]["verbose"]
 
-    X_train, y_train = np.array(X_train, dtype=object), np.array(y_train)
-    X_val, y_val = np.array(X_val, dtype=object), np.array(y_val)
-    
-    logger.info(f"Training samples: {len(X_train)}, Validation samples: {len(X_val)}")
-    logger.info(f"Train - NO_DRONE: {np.sum(y_train==0)}, DRONE: {np.sum(y_train==1)}")
-    logger.info(f"Val - NO_DRONE: {np.sum(y_val==0)}, DRONE: {np.sum(y_val==1)}")
-    return X_train, y_train, X_val, y_val
-
-def extract_statistical_features(mfcc: np.ndarray) -> np.ndarray:
-    mfcc = np.asarray(mfcc, dtype=np.float32)
-    features = []
-    
-    features.extend(np.mean(mfcc, axis=0))
-    features.extend(np.std(mfcc, axis=0))
-    features.extend(np.min(mfcc, axis=0))
-    features.extend(np.max(mfcc, axis=0))
-    features.extend(np.median(mfcc, axis=0))
-    features.extend(np.percentile(mfcc, 25, axis=0))
-    features.extend(np.percentile(mfcc, 75, axis=0))
-    
-    delta = np.diff(mfcc, axis=0)
-    if len(delta) > 0:
-        features.extend(np.mean(delta, axis=0))
-        features.extend(np.std(delta, axis=0))
-    else:
-        features.extend(np.zeros(mfcc.shape[1]))
-        features.extend(np.zeros(mfcc.shape[1]))
-    
-    return np.array(features, dtype=np.float32)
-
-def prepare_ml_features(X: np.ndarray) -> np.ndarray:
-    logger.info("Extracting statistical features from MFCC...")
-    features = []
-    for mfcc in X:
-        feat = extract_statistical_features(mfcc)
-        features.append(feat)
-    return np.array(features)
+# -------------------------------------------------------------------------
+# -------------------------------------------------------------------------
+# Model Training
+# -------------------------------------------------------------------------
+# -------------------------------------------------------------------------
 
 def train_random_forest(X_train, y_train, X_val, y_val) -> Dict:
-    logger.info("\n" + "="*60)
+    logger.info("="*60)
     logger.info("Training Random Forest Classifier (Binary)")
     logger.info("="*60)
     
     model = RandomForestClassifier(
-        n_estimators=200,
-        max_depth=20,
-        min_samples_split=5,
-        min_samples_leaf=2,
-        random_state=42,
-        n_jobs=-1,
-        verbose=1
+        n_estimators=RF_N_ESTIMATORS,
+        max_depth=RF_MAX_DEPTH,
+        min_samples_split=MIN_SAMP_SPLT,
+        min_samples_leaf=MIN_SAMP_LEAF,
+        random_state=RF_RNDM_STATE,
+        n_jobs=RF_N_JOBS,
+        verbose=RF_VERBOSE
     )
     
     model.fit(X_train, y_train)
@@ -137,17 +119,17 @@ def train_random_forest(X_train, y_train, X_val, y_val) -> Dict:
     }
 
 def train_svm(X_train, y_train, X_val, y_val) -> Dict:
-    logger.info("\n" + "="*60)
+    logger.info("="*60)
     logger.info("Training Support Vector Machine (Binary)")
     logger.info("="*60)
     
     model = SVC(
-        kernel='rbf',
-        C=10,
-        gamma='scale',
-        probability=True,  # Enable probability estimates
-        random_state=42,
-        verbose=True
+        kernel=KERNEL,
+        C=SVM_C,
+        gamma=GAMMA,
+        probability=PROBABILITY,
+        random_state=SVM_RNDM_STATE,
+        verbose=SVM_VERBOSE
     )
     
     model.fit(X_train, y_train)
@@ -164,19 +146,19 @@ def train_svm(X_train, y_train, X_val, y_val) -> Dict:
     }
 
 def train_xgboost(X_train, y_train, X_val, y_val) -> Dict:
-    logger.info("\n" + "="*60)
+    logger.info("="*60)
     logger.info("Training XGBoost Classifier (Binary)")
     logger.info("="*60)
     
     model = xgb.XGBClassifier(
-        n_estimators=200,
-        max_depth=10,
-        learning_rate=0.1,
-        subsample=0.8,
-        colsample_bytree=0.8,
-        random_state=42,
-        n_jobs=-1,
-        verbosity=1
+        n_estimators=XG_N_ESTIMATORS,
+        max_depth=XG_MAX_DEPTH,
+        learning_rate=XG_LEARNING_RATE,
+        subsample=XG_SUBSAMPLE,
+        colsample_bytree=XG_COLSAMPLE_BYTREE,
+        random_state=XG_RNDM_STATE,
+        n_jobs=XG_N_JOBS,
+        verbosity=XG_VERBOSE
     )
     
     model.fit(X_train, y_train)
@@ -193,17 +175,17 @@ def train_xgboost(X_train, y_train, X_val, y_val) -> Dict:
     }
 
 def train_gradient_boosting(X_train, y_train, X_val, y_val) -> Dict:
-    logger.info("\n" + "="*60)
+    logger.info("="*60)
     logger.info("Training Gradient Boosting Classifier (Binary)")
     logger.info("="*60)
     
     model = GradientBoostingClassifier(
-        n_estimators=200,
-        max_depth=10,
-        learning_rate=0.1,
-        subsample=0.8,
-        random_state=42,
-        verbose=1
+        n_estimators=GB_N_ESTIMATORS,
+        max_depth=GB_MAX_DEPTH,
+        learning_rate=GB_LEARNING_RATE,
+        subsample=GB_SUBSAMPLE,
+        random_state=GB_RNDM_STATE,
+        verbose=GB_VERBOSE
     )
     
     model.fit(X_train, y_train)
@@ -223,12 +205,14 @@ def main():
     logger.info("Starting Binary ML Models Training...")
     
     csv_dir = str(CSV_DIR)
-    X_train_raw, y_train, X_val_raw, y_val = load_dataset(csv_dir)
+    X_train_raw, y_train, X_val_raw, y_val = load_dataset(csv_dir=CSV_DIR,test_split=TEST_SPLIT,shffl=SHUFFLE, rand_state=RANDOM_STATE,is_binary=True)
     
     X_train = prepare_ml_features(X_train_raw)
     X_val = prepare_ml_features(X_val_raw)
     
     logger.info(f"Feature vector size: {X_train.shape[1]}")
+    logger.info(f"Feature vector length: {X_train.shape[1]}")
+    assert X_train.shape[1] == X_val.shape[1], "Feature dimensions mismatch!"
     
     logger.info("Standardizing features...")
     scaler = StandardScaler()
@@ -241,7 +225,7 @@ def main():
     results.append(train_xgboost(X_train, y_train, X_val, y_val))
     results.append(train_gradient_boosting(X_train, y_train, X_val, y_val))
     
-    logger.info("\n" + "="*60)
+    logger.info("="*60)
     logger.info("MODEL COMPARISON")
     logger.info("="*60)
     
@@ -249,10 +233,10 @@ def main():
         logger.info(f"{result['name']}: {result['accuracy']:.4f} ({result['accuracy']*100:.2f}%)")
     
     best_result = max(results, key=lambda x: x['accuracy'])
-    logger.info(f"\nBest Model: {best_result['name']} with {best_result['accuracy']*100:.2f}% accuracy")
+    logger.info(f"Best Model: {best_result['name']} with {best_result['accuracy']*100:.2f}% accuracy")
     
     # Create trained_models/binary/ml_models at repo root (only if not exists)
-    model_dir = TRAINED_MODEL_ROOT / "binary" / "ml_models"
+    model_dir = TRAINED_MODEL_ROOT / SPECIFIC_FOLDER
     model_dir.mkdir(parents=True, exist_ok=True)
     
     best_model_path = model_dir / f"best_ml_model_binary_{best_result['name'].lower()}.pkl"
@@ -271,20 +255,20 @@ def main():
             pickle.dump(result['model'], f)
         logger.info(f"{result['name']} saved to: {model_path}")
     
-    logger.info("\n" + "="*60)
+    logger.info("="*60)
     logger.info(f"DETAILED REPORT FOR {best_result['name']}")
     logger.info("="*60)
     
     class_names = ['NO_DRONE', 'DRONE']
-    logger.info("\nConfusion Matrix:")
+    logger.info("Confusion Matrix:")
     cm = confusion_matrix(y_val, best_result['predictions'])
     logger.info(f"\n{cm}")
     
-    logger.info("\nClassification Report:")
+    logger.info("Classification Report:")
     report = classification_report(y_val, best_result['predictions'], target_names=class_names)
     logger.info(f"\n{report}")
     
-    logger.info("\nTraining completed successfully!")
+    logger.info("Training completed successfully!")
 
 if __name__ == "__main__":
     main()
