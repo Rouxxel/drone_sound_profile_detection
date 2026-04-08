@@ -59,7 +59,7 @@
         },
         "binary":{
             "general":{
-                "folder":"multiclass",
+                "folder":"binary",
                 "classes":["DRONE","NO_DRONE"],
                 "test_split":0.2,
                 "shuffle":true,
