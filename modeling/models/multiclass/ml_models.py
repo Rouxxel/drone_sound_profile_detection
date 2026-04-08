@@ -9,12 +9,12 @@ This script implements traditional ML models:
 - XGBoost
 - Gradient Boosting
 
-These models work directly on flattened MFCC features.
+These models work directly on MFCC features.
 """
 
 import os
 import pickle
-import logging
+import sys
 from pathlib import Path
 from typing import Tuple, Dict
 import numpy as np
@@ -29,25 +29,51 @@ import xgboost as xgb
 # -------------------------------------------------------------------------
 # Paths (script in modeling/models/multiclass/; repo root = 3 levels up)
 # -------------------------------------------------------------------------
-SCRIPT_DIR = Path(__file__).resolve().parent
-REPO_ROOT = SCRIPT_DIR.parent.parent.parent
-CSV_DIR = REPO_ROOT / "datasets" / "converted_csv"
+SCRIPT_DIR = Path(__file__).resolve().parent #multiclass/
+REPO_ROOT = SCRIPT_DIR.parent.parent.parent #root/
+CSV_DIR = REPO_ROOT / "datasets" / "trad_ml_csv"
 TRAINED_MODEL_ROOT = REPO_ROOT / "trained_models"
 
-# -------------------------------------------------------------------------
-# Logging (shared format; log file: logs/ml_models_training.log)
-# -------------------------------------------------------------------------
+#custom logger
+sys.path.append(str(REPO_ROOT))
 from modeling.utils.custom_logger import get_logger
 logger = get_logger("ml_models_logger", "ml_models_training.log")
 
+# Configuration
+TEST_SPLIT=0.2
+SHUFFLE=True
+RANDOM_STATE=42
+
 # -------------------------------------------------------------------------
 # Dataset Loading
-# -------------------------------------------------------------------------
 
-def load_dataset(csv_dir: str) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+def load_dataset(
+    csv_dir:str, 
+    test_split:float, 
+    shffl:bool, 
+    rand_state:int
+    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    """
+    Load a complete audio feature dataset from a folder containing MFCC CSV files. Scans
+    specified directory for CSV files, infers their class labels from the filename 
+    (BACKGROUND, HELICOPTER, DRONE), loads the MFCC matrices, groups samples by class 
+    and performs an train/validation split
+    for each class.
+
+    Returns
+    -------
+    X_train : np.ndarray of object
+        List-like array of MFCC matrices used for training.
+    y_train : np.ndarray
+        Integer class labels for the training set.
+    X_val : np.ndarray of object
+        List-like array of MFCC matrices used for validation.
+    y_val : np.ndarray
+        Integer class labels for the validation set.
+    """
+
     csv_path = Path(csv_dir)
     assert csv_path.exists(), f"CSV directory not found: {csv_dir}"
-
     logger.info(f"Loading dataset from {csv_path}")
 
     class_map = {"BACKGROUND": 0, "HELICOPTER": 1, "DRONE": 2}
@@ -72,7 +98,7 @@ def load_dataset(csv_dir: str) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.n
         if len(samples) == 0:
             logger.error(f"No samples found for class {label}.")
             continue
-        train_split, val_split = train_test_split(samples, test_size=0.2, shuffle=True, random_state=42)
+        train_split, val_split = train_test_split(samples, test_size=test_split, shuffle=shffl, random_state=rand_state)
         X_train.extend(train_split)
         y_train.extend([label]*len(train_split))
         X_val.extend(val_split)
@@ -86,10 +112,32 @@ def load_dataset(csv_dir: str) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.n
 
 # -------------------------------------------------------------------------
 # Feature Extraction
-# -------------------------------------------------------------------------
 
 def extract_statistical_features(mfcc: np.ndarray) -> np.ndarray:
-    """Extract statistical features from MFCC"""
+    """
+    Extract a fixed-length statistical feature vector from an MFCC matrix. Take 
+    MFCC time-series matrix (shape: frames × coefficients) and computes 
+    summary statistics across time for each MFCC coefficient.
+
+    Returns
+    -------
+    np.ndarray
+        1D feature vector (float32) containing the following statistics
+        for each MFCC coefficient:
+
+        - Mean
+        - Standard deviation
+        - Minimum value
+        - Maximum value
+        - Median
+        - 25th percentile
+        - 75th percentile
+        - Mean of first-order delta (temporal derivative)
+        - Std of first-order delta
+
+        If the MFCC contains fewer than 2 frames, delta features are
+        replaced with zeros.
+    """
     # Ensure mfcc is a proper numpy array with float dtype
     mfcc = np.asarray(mfcc, dtype=np.float32)
     
@@ -114,11 +162,28 @@ def extract_statistical_features(mfcc: np.ndarray) -> np.ndarray:
     else:
         features.extend(np.zeros(mfcc.shape[1]))
         features.extend(np.zeros(mfcc.shape[1]))
-    
-    return np.array(features, dtype=np.float32)
 
+    #Convert list to np array for vector operations
+    vec = np.array(features, dtype=np.float32)
+    vec = np.nan_to_num(vec, nan=0.0, posinf=0.0, neginf=0.0) #nan_to_num before return
+    
+    return vec
+
+# -------------------------------------------------------------------------
+# ML feature preparation
 def prepare_ml_features(X: np.ndarray) -> np.ndarray:
-    """Convert MFCC arrays to feature vectors for ML models"""
+    """
+    Convert a list/array of MFCC matrices into fixed-length ML feature vectors.
+    Applies `extract_statistical_features()` to each MFCC sample
+    for compact, fixed-size numerical representation suitable for
+    classical machine-learning models
+
+    Returns
+    -------
+    np.ndarray
+        2D array of shape (n_samples, n_features), where each row contains
+        the statistical feature vector extracted from one MFCC sample.
+    """
     logger.info("Extracting statistical features from MFCC...")
     features = []
     for mfcc in X:
@@ -127,7 +192,9 @@ def prepare_ml_features(X: np.ndarray) -> np.ndarray:
     return np.array(features)
 
 # -------------------------------------------------------------------------
+# -------------------------------------------------------------------------
 # Model Training
+# -------------------------------------------------------------------------
 # -------------------------------------------------------------------------
 
 def train_random_forest(X_train, y_train, X_val, y_val) -> Dict:
@@ -262,13 +329,15 @@ def main():
     
     # Load dataset
     csv_dir = str(CSV_DIR)
-    X_train_raw, y_train, X_val_raw, y_val = load_dataset(csv_dir)
+    X_train_raw, y_train, X_val_raw, y_val = load_dataset(csv_dir=csv_dir,test_split=TEST_SPLIT,shffl=SHUFFLE, rand_state=RANDOM_STATE)
     
     # Extract features
     X_train = prepare_ml_features(X_train_raw)
     X_val = prepare_ml_features(X_val_raw)
     
     logger.info(f"Feature vector size: {X_train.shape[1]}")
+    logger.info(f"Feature vector length: {X_train.shape[0]}")
+    assert X_train.shape[1] == X_val.shape[1], "Feature dimensions mismatch!"
     
     # Standardize features
     logger.info("Standardizing features...")
