@@ -7,6 +7,8 @@ Run from any directory; paths are relative to this script.
 """
 
 import os
+import sys
+import math
 from pathlib import Path
 import pandas as pd
 import numpy as np
@@ -16,19 +18,22 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.decomposition import PCA
 
 # --------------- PATHS --------------- #
-SCRIPT_DIR = Path(__file__).resolve().parent
-REPO_ROOT = SCRIPT_DIR.parent.parent
-CSV_FOLDER = REPO_ROOT / "datasets" / "converted_csv"
+SCRIPT_DIR = Path(__file__).resolve().parent #EDA/
+REPO_ROOT = SCRIPT_DIR.parent.parent #root/
+
+CSV_FOLDER = REPO_ROOT / "datasets" / "trad_ml_csv" #Modify input folder as necessary
 AUDIOS_FOLDER = REPO_ROOT / "datasets" / "audios"
-OUTPUT_DIR = SCRIPT_DIR / "eda_report"
+OUTPUT_DIR = SCRIPT_DIR / "eda_report_trad_ml" #Modify output folder necessary
 
 # --------------- CONFIG --------------- #
-SAMP_RATE = 44100
-HOP_LENGTH = 512
-N_MFCC = 14
-DURATION_SHORT_S = 1.0
-DURATION_LONG_S = 30.0
-MEAN_RMS_SILENCE_THRESHOLD = 0.001
+sys.path.append(str(REPO_ROOT))
+from configuration.config_loader import config
+SAMP_RATE = config["eda"]["summary_report"]["samp_rate"]
+HOP_LENGTH = config["eda"]["summary_report"]["hop_length"]
+N_MFCC = config["eda"]["summary_report"]["n_mfcc"]
+DURATION_SHORT_S = config["eda"]["summary_report"]["duration_short.s"]
+DURATION_LONG_S = config["eda"]["summary_report"]["duration_long.s"]
+MEAN_RMS_SILENCE_THRESHOLD = config["eda"]["summary_report"]["mean_rms_silence_threshold"]
 
 
 def extract_statistical_features(mfcc: np.ndarray) -> np.ndarray:
@@ -123,7 +128,7 @@ def plot_duration_distribution(df: pd.DataFrame, out_dir: Path):
     fig, ax = plt.subplots(figsize=(8, 4))
     classes = df["class"].unique()
     data = [df.loc[df["class"] == c, "duration_sec"].values for c in sorted(classes)]
-    bp = ax.boxplot(data, labels=sorted(classes), patch_artist=True)
+    bp = ax.boxplot(data, tick_labels=sorted(classes), patch_artist=True)
     for i, patch in enumerate(bp["boxes"]):
         patch.set_facecolor(["#2ecc71", "#3498db", "#95a5a6"][i % 3])
     ax.set_title("Duration distribution per class (seconds)")
@@ -138,42 +143,54 @@ def plot_mfcc_mean_by_class(rows: list, out_dir: Path):
     """Mean MFCC profile per class (line plot) + per-coefficient boxplots by class."""
     df = pd.DataFrame(rows)
     classes = sorted(df["class"].unique())
-    n_mfcc = len(df["mean_mfcc"].iloc[0])
+    n_features = len(df["mean_mfcc"].iloc[0])  # Works for 14, 21, or more
 
-    # 03: One line per class = mean (across files) of each MFCC coefficient
+    # -------------------------------
+    # 03: Line plot of mean profile
+    # -------------------------------
     fig, ax = plt.subplots(figsize=(10, 4))
     colors = ["#2ecc71", "#3498db", "#95a5a6"]
     for i, c in enumerate(classes):
         means = np.array([r["mean_mfcc"] for r in rows if r["class"] == c])
         profile = np.mean(means, axis=0)
-        ax.plot(range(n_mfcc), profile, "o-", label=c, color=colors[i % 3], linewidth=2)
-    ax.set_xlabel("MFCC coefficient")
+        ax.plot(range(n_features), profile, "o-", label=c, color=colors[i % 3], linewidth=2)
+    ax.set_xlabel("Feature index")
     ax.set_ylabel("Mean value (across files)")
-    ax.set_title("Mean MFCC profile per class")
+    ax.set_title("Mean feature profile per class")
     ax.legend()
     ax.grid(True, alpha=0.3)
     plt.tight_layout()
-    plt.savefig(out_dir / "03_mfcc_mean_by_class.png", dpi=150)
+    plt.savefig(out_dir / "03_mean_by_class.png", dpi=150)
     plt.close()
-    print("  Saved 03_mfcc_mean_by_class.png")
+    print("  Saved 03_mean_by_class.png")
 
-    # 04: One subplot per MFCC coefficient: 3 boxplots (one per class)
-    fig, axes = plt.subplots(2, 7, figsize=(16, 6))
+    # -------------------------------
+    # 04: Boxplots per coefficient
+    # -------------------------------
+    # Determine subplot grid automatically
+    n_cols = 7
+    n_rows = math.ceil(n_features / n_cols)
+    fig, axes = plt.subplots(n_rows, n_cols, figsize=(n_cols*2.5, n_rows*2.5))
     axes = axes.flatten()
-    for coef in range(n_mfcc):
+
+    for coef in range(n_features):
         ax = axes[coef]
         data_by_class = [[r["mean_mfcc"][coef] for r in rows if r["class"] == c] for c in classes]
-        bp = ax.boxplot(data_by_class, labels=classes, patch_artist=True)
+        bp = ax.boxplot(data_by_class, tick_labels=classes, patch_artist=True)
         for i, patch in enumerate(bp["boxes"]):
             patch.set_facecolor(["#2ecc71", "#3498db", "#95a5a6"][i % 3])
-        ax.set_title(f"MFCC {coef}")
+        ax.set_title(f"Feature {coef}")
         ax.set_xticklabels(classes, rotation=45, ha="right")
-    plt.suptitle("Mean MFCC per file by class", y=1.02)
-    plt.tight_layout()
-    plt.savefig(out_dir / "04_mfcc_coef_by_class.png", dpi=150)
-    plt.close()
-    print("  Saved 04_mfcc_coef_by_class.png")
 
+    # Hide any unused axes
+    for i in range(n_features, len(axes)):
+        axes[i].axis("off")
+
+    plt.suptitle("Per-feature boxplots by class", y=1.02)
+    plt.tight_layout()
+    plt.savefig(out_dir / "04_features_by_class.png", dpi=150)
+    plt.close()
+    print("  Saved 04_features_by_class.png")
 
 def save_summary_stats_table(rows: list, out_dir: Path):
     """Per-class summary stats (mean of mean_mfcc, etc.) as CSV."""
@@ -292,13 +309,13 @@ def write_report(rows: list, out_dir: Path, quality: dict):
 
 def main():
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-    print(f"📂 CSV folder:  {CSV_FOLDER}")
-    print(f"📂 Output:     {OUTPUT_DIR}\n")
+    print(f"CSV folder:  {CSV_FOLDER}")
+    print(f"Output:     {OUTPUT_DIR}\n")
 
     print("Loading all CSV files...")
     rows = load_all_csv_summaries()
     if not rows:
-        print("❌ No CSV files found.")
+        print("No CSV files found.")
         return
     print(f"  Loaded {len(rows)} files.\n")
 
@@ -313,7 +330,7 @@ def main():
     plot_pca_separability(rows, OUTPUT_DIR)
     write_report(rows, OUTPUT_DIR, quality)
 
-    print("\n✅ EDA summary report done. All outputs saved to:", OUTPUT_DIR)
+    print("\nEDA summary report done. All outputs saved to:", OUTPUT_DIR)
 
 
 if __name__ == "__main__":

@@ -9,7 +9,18 @@
         }
     },
     "eda":{
-
+        "summary_report":{
+            "samp_rate":44100,
+            "hop_length": 512,
+            "n_mfcc":14,
+            "duration_short.s":1.0,
+            "duration_long.s": 30.0,
+            "mean_rms_silence_threshold": 0.001
+        },
+        "plot_converter":{
+            "samp_rate":44100,
+            "hop_length":512
+        }
     },
     "ml_models":{
         "output_folder_str":"trained_models",

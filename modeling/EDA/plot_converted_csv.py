@@ -4,6 +4,7 @@ and save them in modeling/EDA/plots/. Run from any directory; paths are relative
 """
 
 import os
+import sys
 from pathlib import Path
 import pandas as pd
 import numpy as np
@@ -12,14 +13,17 @@ import librosa
 
 # ---------------- SETTINGS ---------------- #
 # Script lives in modeling/EDA/; datasets/ is at repo root (two levels up)
-SCRIPT_DIR = Path(__file__).resolve().parent
-REPO_ROOT = SCRIPT_DIR.parent.parent
-CSV_FOLDER = REPO_ROOT / "datasets" / "converted_csv"
-PLOTS_DIR = SCRIPT_DIR / "plots"
-AUDIOS_FOLDER = REPO_ROOT / "datasets" / "audios"
+SCRIPT_DIR = Path(__file__).resolve().parent #modelling/
+REPO_ROOT = SCRIPT_DIR.parent.parent #root/
+CSV_FOLDER = REPO_ROOT / "datasets" / "trad_ml_csv" #Modify input folder as necessary
+PLOTS_DIR = SCRIPT_DIR / "plots_trad_ml" #Modify output folder necessary
+AUDIOS_FOLDER = REPO_ROOT / "datasets" / "audios" 
 
-samp_rate = 44100
-hop_length = 512
+# --------------- CONFIG --------------- #
+sys.path.append(str(REPO_ROOT))
+from configuration.config_loader import config
+SAMP_RATE = config["eda"]["plot_converter"]["samp_rate"]
+HOP_LENGTH = config["eda"]["plot_converter"]["hop_length"]
 
 # Set to None to plot ALL CSVs; set to a filename (e.g. "DRONE_001.csv") to plot only that file
 plot_one = None
@@ -28,12 +32,12 @@ plot_one = None
 PLOTS_DIR.mkdir(exist_ok=True)
 
 if not CSV_FOLDER.exists():
-    print(f"❌ CSV folder not found: {CSV_FOLDER}")
-    print("   Run audio_to_csv_converter.py first to create converted_csv/.")
+    print(f"CSV folder not found: {CSV_FOLDER}")
+    print("Run audio_to_csv_converter.py first to create converted_csv/.")
     exit(1)
 
-print(f"📂 Reading from: {CSV_FOLDER}")
-print(f"📂 Saving to:   {PLOTS_DIR}\n")
+print(f"Reading from: {CSV_FOLDER}")
+print(f"Saving to:   {PLOTS_DIR}\n")
 
 # Pick which files to process
 if plot_one is None:
@@ -63,15 +67,15 @@ for csv_file in csv_files:
     mfcc_data = mfcc_df.values
     n_frames, n_mfcc = mfcc_data.shape
 
-    # Timestamps from frame count (same convention as converter: hop_length=512)
-    timestamps = np.arange(n_frames) * hop_length / samp_rate
+    # Timestamps from frame count
+    timestamps = np.arange(n_frames) * HOP_LENGTH / SAMP_RATE
 
     # RMS from corresponding WAV if available
     audio_path = AUDIOS_FOLDER / f"{base_name}.wav"
     if audio_path.exists():
-        y, _ = librosa.load(str(audio_path), sr=samp_rate)
-        rms = librosa.feature.rms(y=y, hop_length=hop_length)[0]
-        rms_timestamps = np.arange(len(rms)) * hop_length / samp_rate
+        y, _ = librosa.load(str(audio_path), sr=SAMP_RATE)
+        rms = librosa.feature.rms(y=y, hop_length=HOP_LENGTH)[0]
+        rms_timestamps = np.arange(len(rms)) * HOP_LENGTH / SAMP_RATE
         has_rms = True
     else:
         has_rms = False
@@ -107,6 +111,6 @@ for csv_file in csv_files:
     plt.savefig(plot_path)
     plt.close()
 
-    print(f"  Saved {plot_path.name}")
+    print(f"Saved {plot_path.name}")
 
-print("✅ Done.")
+print("Done.")
