@@ -6,6 +6,7 @@ Tests binary classification: DRONE vs NO_DRONE
 """
 
 import os
+import sys
 import pickle
 import logging
 from pathlib import Path
@@ -18,83 +19,18 @@ from sklearn.model_selection import train_test_split
 # Paths (script in modeling/models/binary/testing/; repo root = 4 levels up)
 SCRIPT_DIR = Path(__file__).resolve().parent
 REPO_ROOT = SCRIPT_DIR.parent.parent.parent.parent
-CSV_DIR = REPO_ROOT / "datasets" / "converted_csv"
-TRAINED_MODEL_ROOT = REPO_ROOT / "trained_models"
+CSV_DIR = str(REPO_ROOT / "datasets" / "trad_ml_csv") #change as necessary for testing
+TRAINED_MODEL_ROOT = REPO_ROOT / "trained_models" / "binary" #change as necessary for testing
+CLASS_NAMES = {0: "NO_DRONE", 1: "DRONE"}
 
 # Logging (shared format; log file: logs/ml_models_binary_testing.log)
+sys.path.append(str(REPO_ROOT))
 from modeling.utils.custom_logger import get_logger
+from modeling.utils.ml_train_methods import load_dataset, extract_statistical_features, prepare_ml_features
 logger = get_logger("ml_binary_test_logger", "ml_models_binary_testing.log")
 
-def load_dataset(csv_dir: str):
-    csv_path = Path(csv_dir)
-    assert csv_path.exists(), f"CSV directory not found: {csv_dir}"
-
-    logger.info(f"Loading dataset from {csv_path}")
-
-    class_names = {0: "NO_DRONE", 1: "DRONE"}
-    data_by_class = {0: [], 1: []}
-
-    for file in csv_path.glob("*.csv"):
-        name = file.stem.upper()
-        if name.startswith("DRONE"):
-            label = 1
-        elif name.startswith("HELICOPTER") or name.startswith("BACKGROUND"):
-            label = 0
-        else:
-            logger.warning(f"Skipping unknown file: {file.name}")
-            continue
-        mfcc = pd.read_csv(file).values.astype(np.float32)
-        data_by_class[label].append(mfcc)
-
-    X_train, y_train, X_val, y_val = [], [], [], []
-    for label, samples in data_by_class.items():
-        if len(samples) == 0:
-            logger.error(f"No samples found for class {label}.")
-            continue
-        train_split, val_split = train_test_split(samples, test_size=0.2, shuffle=True, random_state=42)
-        X_train.extend(train_split)
-        y_train.extend([label]*len(train_split))
-        X_val.extend(val_split)
-        y_val.extend([label]*len(val_split))
-
-    X_train, y_train = np.array(X_train, dtype=object), np.array(y_train)
-    X_val, y_val = np.array(X_val, dtype=object), np.array(y_val)
-    
-    logger.info(f"Training samples: {len(X_train)}, Validation samples: {len(X_val)}")
-    return X_train, y_train, X_val, y_val, class_names
-
-def extract_statistical_features(mfcc: np.ndarray) -> np.ndarray:
-    mfcc = np.asarray(mfcc, dtype=np.float32)
-    features = []
-    
-    features.extend(np.mean(mfcc, axis=0))
-    features.extend(np.std(mfcc, axis=0))
-    features.extend(np.min(mfcc, axis=0))
-    features.extend(np.max(mfcc, axis=0))
-    features.extend(np.median(mfcc, axis=0))
-    features.extend(np.percentile(mfcc, 25, axis=0))
-    features.extend(np.percentile(mfcc, 75, axis=0))
-    
-    delta = np.diff(mfcc, axis=0)
-    if len(delta) > 0:
-        features.extend(np.mean(delta, axis=0))
-        features.extend(np.std(delta, axis=0))
-    else:
-        features.extend(np.zeros(mfcc.shape[1]))
-        features.extend(np.zeros(mfcc.shape[1]))
-    
-    return np.array(features, dtype=np.float32)
-
-def prepare_ml_features(X: np.ndarray) -> np.ndarray:
-    logger.info("Extracting statistical features from MFCC...")
-    features = []
-    for mfcc in X:
-        feat = extract_statistical_features(mfcc)
-        features.append(feat)
-    return np.array(features)
-
 def test_model(model, model_name: str, X_val, y_val, class_names: Dict):
-    logger.info(f"\n{'='*60}")
+    logger.info(f"{'='*60}")
     logger.info(f"Testing {model_name}")
     logger.info('='*60)
     
@@ -104,15 +40,15 @@ def test_model(model, model_name: str, X_val, y_val, class_names: Dict):
     logger.info(f"Validation Accuracy: {accuracy:.4f} ({accuracy*100:.2f}%)")
     
     cm = confusion_matrix(y_val, y_pred)
-    logger.info("\nConfusion Matrix:")
+    logger.info("Confusion Matrix:")
     logger.info(f"\n{cm}")
     
-    logger.info("\nClassification Report:")
+    logger.info("Classification Report:")
     report = classification_report(y_val, y_pred, 
                                    target_names=[class_names[i] for i in sorted(class_names.keys())])
     logger.info(f"\n{report}")
     
-    logger.info("\nPer-class Accuracy:")
+    logger.info("Per-class Accuracy:")
     for i in sorted(class_names.keys()):
         class_mask = y_val == i
         if class_mask.sum() > 0:
@@ -129,7 +65,7 @@ def test_model(model, model_name: str, X_val, y_val, class_names: Dict):
 def main():
     logger.info("Starting Binary ML Models Testing...")
     
-    model_dir = TRAINED_MODEL_ROOT / "binary" / "ml_models"
+    model_dir = TRAINED_MODEL_ROOT
     if not model_dir.exists():
         logger.error(f"Model directory not found: {model_dir}")
         logger.error("Please train the models first by running ml_models_binary.py")
@@ -145,8 +81,7 @@ def main():
     with open(scaler_path, 'rb') as f:
         scaler = pickle.load(f)
     
-    csv_dir = str(CSV_DIR)
-    X_train_raw, y_train, X_val_raw, y_val, class_names = load_dataset(csv_dir)
+    X_train_raw, y_train, X_val_raw, y_val = load_dataset(csv_dir=CSV_DIR,is_binary=True)
     
     X_val = prepare_ml_features(X_val_raw)
     X_val = scaler.transform(X_val)
@@ -165,17 +100,17 @@ def main():
     
     for model_name, model_path in model_files.items():
         if model_path.exists():
-            logger.info(f"\nLoading {model_name} from {model_path}")
+            logger.info(f"Loading {model_name} from {model_path}")
             with open(model_path, 'rb') as f:
                 model = pickle.load(f)
             
-            result = test_model(model, model_name, X_val, y_val, class_names)
+            result = test_model(model=model, model_name=model_name, X_val=X_val, y_val=y_val, class_names=CLASS_NAMES)
             results.append(result)
         else:
             logger.warning(f"Model file not found: {model_path}")
     
     if results:
-        logger.info("\n" + "="*60)
+        logger.info("="*60)
         logger.info("MODEL COMPARISON SUMMARY")
         logger.info("="*60)
         
@@ -183,9 +118,9 @@ def main():
             logger.info(f"{result['name']:<20}: {result['accuracy']:.4f} ({result['accuracy']*100:.2f}%)")
         
         best_result = max(results, key=lambda x: x['accuracy'])
-        logger.info(f"\nBest Model: {best_result['name']} with {best_result['accuracy']*100:.2f}% accuracy")
+        logger.info(f"Best Model: {best_result['name']} with {best_result['accuracy']*100:.2f}% accuracy")
     
-    logger.info("\nTesting completed successfully!")
+    logger.info("Testing completed successfully!")
 
 if __name__ == "__main__":
     main()
