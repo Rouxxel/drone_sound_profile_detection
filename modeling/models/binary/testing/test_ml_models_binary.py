@@ -33,7 +33,7 @@ logger = get_logger("ml_binary_test_logger", "ml_models_binary_testing.log")
 # Model Testing
 # -------------------------------------------------------------------------
 def test_model(model, model_name: str, X_val, y_val, class_names: Dict):
-    logger.info(f"{'='*60}")
+    logger.info('='*60)
     logger.info(f"Testing {model_name}")
     logger.info('='*60)
     
