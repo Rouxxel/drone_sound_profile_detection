@@ -14,8 +14,9 @@ SCRIPT_DIR = Path(__file__).resolve().parent #utils/
 REPO_ROOT = SCRIPT_DIR.parent.parent.parent #root/
 
 #custom logger
-#sys.path.append(str(REPO_ROOT))
-from custom_logger import get_logger
+sys.path.append(str(REPO_ROOT))
+#from custom_logger import get_logger #local testing only
+from modeling.utils.custom_logger import get_logger
 logger = get_logger("ml_models_logger", "ml_models_training.log")
 
 # -------------------------------------------------------------------------
