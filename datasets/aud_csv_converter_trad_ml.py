@@ -16,6 +16,7 @@ CSV outputs Column Mapping:
 """
 
 import os
+import sys
 from pathlib import Path
 import librosa
 import numpy as np
@@ -23,13 +24,17 @@ import pandas as pd
 
 # Paths: same level as this script
 SCRIPT_DIR = Path(__file__).resolve().parent #datasets/
+REPO_ROOT = SCRIPT_DIR.parent #root/
 AUDIO_FOLDER = SCRIPT_DIR / "audios"
 OUTPUT_FOLDER = SCRIPT_DIR / "trad_ml_csv"
 
 # Configuration
-N_MFCC = 14
-INCLUDE_HNR = True
-FILE_TYPES = (".wav", ".mp3", ".flac", ".ogg", ".m4a")
+sys.path.append(str(REPO_ROOT))
+from configuration.config_loader import config
+N_MFCC = config["audio_converters"]["trad_ml_models"]["n_mfcc"]
+INCLUDE_HNR = config["audio_converters"]["trad_ml_models"]["include_hnr"]
+FILE_TYPES = tuple(config["audio_converters"]["input_file_extensions"])
+OUTPUT_TYPE = config["audio_converters"]["output_file_extensions"]
 
 def extract_features(y, sr, n_mfcc=N_MFCC, include_hnr=INCLUDE_HNR):
     """
@@ -99,7 +104,7 @@ def run_conversion():
         if not filename.lower().endswith(FILE_TYPES):
             continue
 
-        csv_filename = Path(filename).stem + ".csv"
+        csv_filename = Path(filename).stem + OUTPUT_TYPE
         csv_path = OUTPUT_FOLDER / csv_filename #save in new folder
 
         if csv_path.exists():

@@ -4,10 +4,11 @@ Both folders are at the same level (sibling to this script in datasets/).
 Run from any directory; paths are relative to this script's location.
 
 CSV outputs Column Mapping:
-- [0-13]: MFCCs (14 coefficients)
+- [0-13]: MFCCs (14 coefficients) recommended
 """
 
 import os
+import sys
 from pathlib import Path
 import librosa
 import numpy as np
@@ -15,10 +16,16 @@ import pandas as pd
 
 # Paths: same level as this script
 SCRIPT_DIR = Path(__file__).resolve().parent #datasets/
+REPO_ROOT = SCRIPT_DIR.parent #root/
 AUDIO_FOLDER = SCRIPT_DIR / "audios"
 OUTPUT_FOLDER = SCRIPT_DIR / "converted_csv"
 
-FILE_TYPES = (".wav", ".mp3", ".flac", ".ogg", ".m4a")
+# Configuration
+sys.path.append(str(REPO_ROOT))
+from configuration.config_loader import config
+N_MFCC = config["audio_converters"]["trad_ml_models"]["n_mfcc"]
+FILE_TYPES = tuple(config["audio_converters"]["input_file_extensions"])
+OUTPUT_TYPE = config["audio_converters"]["output_file_extensions"]
 
 def run_converion():
     if not AUDIO_FOLDER.exists():
@@ -36,7 +43,7 @@ def run_converion():
         if not filename.lower().endswith(FILE_TYPES):
             continue
 
-        csv_filename = Path(filename).stem + ".csv"
+        csv_filename = Path(filename).stem + OUTPUT_TYPE
         csv_path = OUTPUT_FOLDER / csv_filename
 
         if csv_path.exists():
@@ -50,7 +57,7 @@ def run_converion():
         y, sr = librosa.load(str(file_path), sr=None)
 
         # Compute MFCCs (14 coefficients recommended for drones)
-        mfcc = librosa.feature.mfcc(y=y, sr=sr, n_mfcc=14)
+        mfcc = librosa.feature.mfcc(y=y, sr=sr, n_mfcc=N_MFCC)
 
         # Normalize MFCCs
         mfcc = (mfcc - np.mean(mfcc)) / np.std(mfcc)
