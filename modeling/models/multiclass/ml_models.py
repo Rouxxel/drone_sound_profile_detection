@@ -31,165 +31,54 @@ import xgboost as xgb
 # -------------------------------------------------------------------------
 SCRIPT_DIR = Path(__file__).resolve().parent #multiclass/
 REPO_ROOT = SCRIPT_DIR.parent.parent.parent #root/
-CSV_DIR = REPO_ROOT / "datasets" / "trad_ml_csv"
-TRAINED_MODEL_ROOT = REPO_ROOT / "trained_models"
 
 #custom logger
 sys.path.append(str(REPO_ROOT))
 from modeling.utils.custom_logger import get_logger
+from configuration.config_loader import config
+from modeling.utils.ml_train_methods import extract_statistical_features, load_dataset, prepare_ml_features
 logger = get_logger("ml_models_logger", "ml_models_training.log")
 
 # Configuration
-TEST_SPLIT=0.2
-SHUFFLE=True
-RANDOM_STATE=42
+CSV_DIR = REPO_ROOT / "datasets" / config["audio_converters"]["trad_ml_models"]["output_folder_str"]
+TRAINED_MODEL_ROOT = REPO_ROOT / config["ml_models"]["output_folder_str"]
+TEST_SPLIT=config["ml_models"]["multiclass"]["general"]["test_split"]
+SHUFFLE=config["ml_models"]["multiclass"]["general"]["shuffle"]
+RANDOM_STATE=config["ml_models"]["multiclass"]["general"]["random_state"]
 
-# -------------------------------------------------------------------------
-# Dataset Loading
+#Random forest
+RF_N_ESTIMATORS=config["ml_models"]["multiclass"]["random_forest"]["n_estimators"]
+RF_MAX_DEPTH=config["ml_models"]["multiclass"]["random_forest"]["max_depth"]
+MIN_SAMP_SPLT=config["ml_models"]["multiclass"]["random_forest"]["min_samples_split"]
+MIN_SAMP_LEAF=config["ml_models"]["multiclass"]["random_forest"]["min_samples_leaf"]
+RF_RNDM_STATE=config["ml_models"]["multiclass"]["random_forest"]["random_state"]
+RF_N_JOBS=config["ml_models"]["multiclass"]["random_forest"]["n_jobs"]
+RF_VERBOSE=config["ml_models"]["multiclass"]["random_forest"]["verbose"]
 
-def load_dataset(
-    csv_dir:str, 
-    test_split:float, 
-    shffl:bool, 
-    rand_state:int
-    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-    """
-    Load a complete audio feature dataset from a folder containing MFCC CSV files. Scans
-    specified directory for CSV files, infers their class labels from the filename 
-    (BACKGROUND, HELICOPTER, DRONE), loads the MFCC matrices, groups samples by class 
-    and performs an train/validation split
-    for each class.
+#SVM
+GAMMA=config["ml_models"]["multiclass"]["svm"]["gamma"]
+SVM_C=config["ml_models"]["multiclass"]["svm"]["c"]
+KERNEL=config["ml_models"]["multiclass"]["svm"]["kernel"]
+SVM_RNDM_STATE=config["ml_models"]["multiclass"]["svm"]["random_state"]
+SVM_VERBOSE=config["ml_models"]["multiclass"]["svm"]["verbose"]
 
-    Returns
-    -------
-    X_train : np.ndarray of object
-        List-like array of MFCC matrices used for training.
-    y_train : np.ndarray
-        Integer class labels for the training set.
-    X_val : np.ndarray of object
-        List-like array of MFCC matrices used for validation.
-    y_val : np.ndarray
-        Integer class labels for the validation set.
-    """
+#XGboost
+XG_N_ESTIMATORS=config["ml_models"]["multiclass"]["xgboost"]["n_estimators"]
+XG_MAX_DEPTH=config["ml_models"]["multiclass"]["xgboost"]["max_depth"]
+XG_LEARNING_RATE=config["ml_models"]["multiclass"]["xgboost"]["learning_rate"]
+XG_SUBSAMPLE=config["ml_models"]["multiclass"]["xgboost"]["subsample"]
+XG_COLSAMPLE_BYTREE=config["ml_models"]["multiclass"]["xgboost"]["colsample_bytree"]
+XG_RNDM_STATE=config["ml_models"]["multiclass"]["xgboost"]["random_state"]
+XG_N_JOBS=config["ml_models"]["multiclass"]["xgboost"]["n_jobs"]
+XG_VERBOSE=config["ml_models"]["multiclass"]["xgboost"]["verbose"]
 
-    csv_path = Path(csv_dir)
-    assert csv_path.exists(), f"CSV directory not found: {csv_dir}"
-    logger.info(f"Loading dataset from {csv_path}")
-
-    class_map = {"BACKGROUND": 0, "HELICOPTER": 1, "DRONE": 2}
-    data_by_class = {0: [], 1: [], 2: []}
-
-    for file in csv_path.glob("*.csv"):
-        name = file.stem.upper()
-        if name.startswith("DRONE"):
-            label = class_map["DRONE"]
-        elif name.startswith("HELICOPTER"):
-            label = class_map["HELICOPTER"]
-        elif name.startswith("BACKGROUND"):
-            label = class_map["BACKGROUND"]
-        else:
-            logger.warning(f"Skipping unknown file: {file.name}")
-            continue
-        mfcc = pd.read_csv(file).values.astype(np.float32)
-        data_by_class[label].append(mfcc)
-
-    X_train, y_train, X_val, y_val = [], [], [], []
-    for label, samples in data_by_class.items():
-        if len(samples) == 0:
-            logger.error(f"No samples found for class {label}.")
-            continue
-        train_split, val_split = train_test_split(samples, test_size=test_split, shuffle=shffl, random_state=rand_state)
-        X_train.extend(train_split)
-        y_train.extend([label]*len(train_split))
-        X_val.extend(val_split)
-        y_val.extend([label]*len(val_split))
-
-    X_train, y_train = np.array(X_train, dtype=object), np.array(y_train)
-    X_val, y_val = np.array(X_val, dtype=object), np.array(y_val)
-    
-    logger.info(f"Training samples: {len(X_train)}, Validation samples: {len(X_val)}")
-    return X_train, y_train, X_val, y_val
-
-# -------------------------------------------------------------------------
-# Feature Extraction
-
-def extract_statistical_features(mfcc: np.ndarray) -> np.ndarray:
-    """
-    Extract a fixed-length statistical feature vector from an MFCC matrix. Take 
-    MFCC time-series matrix (shape: frames × coefficients) and computes 
-    summary statistics across time for each MFCC coefficient.
-
-    Returns
-    -------
-    np.ndarray
-        1D feature vector (float32) containing the following statistics
-        for each MFCC coefficient:
-
-        - Mean
-        - Standard deviation
-        - Minimum value
-        - Maximum value
-        - Median
-        - 25th percentile
-        - 75th percentile
-        - Mean of first-order delta (temporal derivative)
-        - Std of first-order delta
-
-        If the MFCC contains fewer than 2 frames, delta features are
-        replaced with zeros.
-    """
-    # Ensure mfcc is a proper numpy array with float dtype
-    mfcc = np.asarray(mfcc, dtype=np.float32)
-    
-    features = []
-    
-    # Mean, std, min, max for each coefficient
-    features.extend(np.mean(mfcc, axis=0))
-    features.extend(np.std(mfcc, axis=0))
-    features.extend(np.min(mfcc, axis=0))
-    features.extend(np.max(mfcc, axis=0))
-    
-    # Median and percentiles
-    features.extend(np.median(mfcc, axis=0))
-    features.extend(np.percentile(mfcc, 25, axis=0))
-    features.extend(np.percentile(mfcc, 75, axis=0))
-    
-    # Delta features (first derivative)
-    delta = np.diff(mfcc, axis=0)
-    if len(delta) > 0:
-        features.extend(np.mean(delta, axis=0))
-        features.extend(np.std(delta, axis=0))
-    else:
-        features.extend(np.zeros(mfcc.shape[1]))
-        features.extend(np.zeros(mfcc.shape[1]))
-
-    #Convert list to np array for vector operations
-    vec = np.array(features, dtype=np.float32)
-    vec = np.nan_to_num(vec, nan=0.0, posinf=0.0, neginf=0.0) #nan_to_num before return
-    
-    return vec
-
-# -------------------------------------------------------------------------
-# ML feature preparation
-def prepare_ml_features(X: np.ndarray) -> np.ndarray:
-    """
-    Convert a list/array of MFCC matrices into fixed-length ML feature vectors.
-    Applies `extract_statistical_features()` to each MFCC sample
-    for compact, fixed-size numerical representation suitable for
-    classical machine-learning models
-
-    Returns
-    -------
-    np.ndarray
-        2D array of shape (n_samples, n_features), where each row contains
-        the statistical feature vector extracted from one MFCC sample.
-    """
-    logger.info("Extracting statistical features from MFCC...")
-    features = []
-    for mfcc in X:
-        feat = extract_statistical_features(mfcc)
-        features.append(feat)
-    return np.array(features)
+#Gradient boosting
+GB_N_ESTIMATORS=config["ml_models"]["multiclass"]["gradient"]["n_estimators"]
+GB_MAX_DEPTH=config["ml_models"]["multiclass"]["gradient"]["max_depth"]
+GB_LEARNING_RATE=config["ml_models"]["multiclass"]["gradient"]["learning_rate"]
+GB_SUBSAMPLE=config["ml_models"]["multiclass"]["gradient"]["subsample"]
+GB_RNDM_STATE=config["ml_models"]["multiclass"]["gradient"]["random_state"]
+GB_VERBOSE=config["ml_models"]["multiclass"]["gradient"]["verbose"]
 
 # -------------------------------------------------------------------------
 # -------------------------------------------------------------------------
@@ -198,18 +87,18 @@ def prepare_ml_features(X: np.ndarray) -> np.ndarray:
 # -------------------------------------------------------------------------
 
 def train_random_forest(X_train, y_train, X_val, y_val) -> Dict:
-    logger.info("\n" + "="*60)
+    logger.info("="*60)
     logger.info("Training Random Forest Classifier")
     logger.info("="*60)
     
     model = RandomForestClassifier(
-        n_estimators=200,
-        max_depth=20,
-        min_samples_split=5,
-        min_samples_leaf=2,
-        random_state=42,
-        n_jobs=-1,
-        verbose=1
+        n_estimators=RF_N_ESTIMATORS,
+        max_depth=RF_MAX_DEPTH,
+        min_samples_split=MIN_SAMP_SPLT,
+        min_samples_leaf=MIN_SAMP_LEAF,
+        random_state=RF_RNDM_STATE,
+        n_jobs=RF_N_JOBS,
+        verbose=RF_VERBOSE
     )
     
     model.fit(X_train, y_train)
@@ -233,16 +122,16 @@ def train_random_forest(X_train, y_train, X_val, y_val) -> Dict:
     }
 
 def train_svm(X_train, y_train, X_val, y_val) -> Dict:
-    logger.info("\n" + "="*60)
+    logger.info("="*60)
     logger.info("Training Support Vector Machine (SVM)")
     logger.info("="*60)
     
     model = SVC(
-        kernel='rbf',
-        C=10,
-        gamma='scale',
-        random_state=42,
-        verbose=True
+        kernel=KERNEL,
+        C=SVM_C,
+        gamma=GAMMA,
+        random_state=SVM_RNDM_STATE,
+        verbose=SVM_VERBOSE
     )
     
     model.fit(X_train, y_train)
@@ -261,19 +150,19 @@ def train_svm(X_train, y_train, X_val, y_val) -> Dict:
     }
 
 def train_xgboost(X_train, y_train, X_val, y_val) -> Dict:
-    logger.info("\n" + "="*60)
+    logger.info("="*60)
     logger.info("Training XGBoost Classifier")
     logger.info("="*60)
     
     model = xgb.XGBClassifier(
-        n_estimators=200,
-        max_depth=10,
-        learning_rate=0.1,
-        subsample=0.8,
-        colsample_bytree=0.8,
-        random_state=42,
-        n_jobs=-1,
-        verbosity=1
+        n_estimators=XG_N_ESTIMATORS,
+        max_depth=XG_MAX_DEPTH,
+        learning_rate=XG_LEARNING_RATE,
+        subsample=XG_SUBSAMPLE,
+        colsample_bytree=XG_COLSAMPLE_BYTREE,
+        random_state=XG_RNDM_STATE,
+        n_jobs=XG_N_JOBS,
+        verbosity=XG_VERBOSE
     )
     
     model.fit(X_train, y_train)
@@ -292,17 +181,17 @@ def train_xgboost(X_train, y_train, X_val, y_val) -> Dict:
     }
 
 def train_gradient_boosting(X_train, y_train, X_val, y_val) -> Dict:
-    logger.info("\n" + "="*60)
+    logger.info("="*60)
     logger.info("Training Gradient Boosting Classifier")
     logger.info("="*60)
     
     model = GradientBoostingClassifier(
-        n_estimators=200,
-        max_depth=10,
-        learning_rate=0.1,
-        subsample=0.8,
-        random_state=42,
-        verbose=1
+        n_estimators=GB_N_ESTIMATORS,
+        max_depth=GB_MAX_DEPTH,
+        learning_rate=GB_LEARNING_RATE,
+        subsample=GB_SUBSAMPLE,
+        random_state=GB_RNDM_STATE,
+        verbose=GB_VERBOSE
     )
     
     model.fit(X_train, y_train)
@@ -354,7 +243,7 @@ def main():
     results.append(train_gradient_boosting(X_train, y_train, X_val, y_val))
     
     # Compare results
-    logger.info("\n" + "="*60)
+    logger.info("="*60)
     logger.info("MODEL COMPARISON")
     logger.info("="*60)
     
@@ -363,7 +252,7 @@ def main():
     
     # Find best model
     best_result = max(results, key=lambda x: x['accuracy'])
-    logger.info(f"\nBest Model: {best_result['name']} with {best_result['accuracy']*100:.2f}% accuracy")
+    logger.info(f"Best Model: {best_result['name']} with {best_result['accuracy']*100:.2f}% accuracy")
     
     # Create trained_models/ml_models at repo root (only if not exists)
     model_dir = TRAINED_MODEL_ROOT / "ml_models"
@@ -387,20 +276,20 @@ def main():
         logger.info(f"{result['name']} saved to: {model_path}")
     
     # Detailed report for best model
-    logger.info("\n" + "="*60)
+    logger.info("="*60)
     logger.info(f"DETAILED REPORT FOR {best_result['name']}")
     logger.info("="*60)
     
     class_names = ['BACKGROUND', 'HELICOPTER', 'DRONE']
-    logger.info("\nConfusion Matrix:")
+    logger.info("Confusion Matrix:")
     cm = confusion_matrix(y_val, best_result['predictions'])
     logger.info(f"\n{cm}")
     
-    logger.info("\nClassification Report:")
+    logger.info("Classification Report:")
     report = classification_report(y_val, best_result['predictions'], target_names=class_names)
     logger.info(f"\n{report}")
     
-    logger.info("\nTraining completed successfully!")
+    logger.info("Training completed successfully!")
 
 if __name__ == "__main__":
     main()
