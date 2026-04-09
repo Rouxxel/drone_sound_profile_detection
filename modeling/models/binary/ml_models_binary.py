@@ -25,19 +25,19 @@ from sklearn.preprocessing import StandardScaler
 import xgboost as xgb
 
 # -------------------------------------------------------------------------
-# Paths (script in modeling/models/binary/; repo root = 3 levels up)
+# main Paths
 # -------------------------------------------------------------------------
 SCRIPT_DIR = Path(__file__).resolve().parent #binary/
 REPO_ROOT = SCRIPT_DIR.parent.parent.parent #root/
 
-#custom logger
+#custom logger, config and utils
 sys.path.append(str(REPO_ROOT))
 from modeling.utils.custom_logger import get_logger
 from configuration.config_loader import config
 from modeling.utils.ml_train_methods import extract_statistical_features, load_dataset, prepare_ml_features
 logger = get_logger("ml_models_binary_logger", "ml_models_binary_training.log")
 
-# Configuration
+# General Configuration
 CSV_DIR = REPO_ROOT / "datasets" / config["audio_converters"]["trad_ml_models"]["output_folder_str"]
 TRAINED_MODEL_ROOT = REPO_ROOT / config["ml_models"]["output_folder_str"]
 SPECIFIC_FOLDER = TRAINED_MODEL_ROOT / config["ml_models"]["binary"]["general"]["folder"]
@@ -45,7 +45,7 @@ TEST_SPLIT=config["ml_models"]["binary"]["general"]["test_split"]
 SHUFFLE=config["ml_models"]["binary"]["general"]["shuffle"]
 RANDOM_STATE=config["ml_models"]["binary"]["general"]["random_state"]
 
-#Random forest
+#Random forest config
 RF_N_ESTIMATORS=config["ml_models"]["binary"]["random_forest"]["n_estimators"]
 RF_MAX_DEPTH=config["ml_models"]["binary"]["random_forest"]["max_depth"]
 MIN_SAMP_SPLT=config["ml_models"]["binary"]["random_forest"]["min_samples_split"]
@@ -54,7 +54,7 @@ RF_RNDM_STATE=config["ml_models"]["binary"]["random_forest"]["random_state"]
 RF_N_JOBS=config["ml_models"]["binary"]["random_forest"]["n_jobs"]
 RF_VERBOSE=config["ml_models"]["binary"]["random_forest"]["verbose"]
 
-#SVM
+#SVM config
 GAMMA=config["ml_models"]["binary"]["svm"]["gamma"]
 SVM_C=config["ml_models"]["binary"]["svm"]["c"]
 PROBABILITY=config["ml_models"]["binary"]["svm"]["probability"]   
@@ -62,7 +62,7 @@ KERNEL=config["ml_models"]["binary"]["svm"]["kernel"]
 SVM_RNDM_STATE=config["ml_models"]["binary"]["svm"]["random_state"]
 SVM_VERBOSE=config["ml_models"]["binary"]["svm"]["verbose"]
 
-#XGboost
+#XGboost config
 XG_N_ESTIMATORS=config["ml_models"]["binary"]["xgboost"]["n_estimators"]
 XG_MAX_DEPTH=config["ml_models"]["binary"]["xgboost"]["max_depth"]
 XG_LEARNING_RATE=config["ml_models"]["binary"]["xgboost"]["learning_rate"]
@@ -72,7 +72,7 @@ XG_RNDM_STATE=config["ml_models"]["binary"]["xgboost"]["random_state"]
 XG_N_JOBS=config["ml_models"]["binary"]["xgboost"]["n_jobs"]
 XG_VERBOSE=config["ml_models"]["binary"]["xgboost"]["verbose"]
 
-#Gradient boosting
+#Gradient boosting config
 GB_N_ESTIMATORS=config["ml_models"]["binary"]["gradient"]["n_estimators"]
 GB_MAX_DEPTH=config["ml_models"]["binary"]["gradient"]["max_depth"]
 GB_LEARNING_RATE=config["ml_models"]["binary"]["gradient"]["learning_rate"]

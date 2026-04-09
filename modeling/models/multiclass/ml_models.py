@@ -27,19 +27,19 @@ from sklearn.preprocessing import StandardScaler
 import xgboost as xgb
 
 # -------------------------------------------------------------------------
-# Paths (script in modeling/models/multiclass/; repo root = 3 levels up)
+# Main Paths
 # -------------------------------------------------------------------------
 SCRIPT_DIR = Path(__file__).resolve().parent #multiclass/
 REPO_ROOT = SCRIPT_DIR.parent.parent.parent #root/
 
-#custom logger
+#custom logger, config and utils
 sys.path.append(str(REPO_ROOT))
 from modeling.utils.custom_logger import get_logger
 from configuration.config_loader import config
 from modeling.utils.ml_train_methods import extract_statistical_features, load_dataset, prepare_ml_features
 logger = get_logger("ml_models_logger", "ml_models_training.log")
 
-# Configuration
+# General Configuration
 CSV_DIR = REPO_ROOT / "datasets" / config["audio_converters"]["trad_ml_models"]["output_folder_str"]
 TRAINED_MODEL_ROOT = REPO_ROOT / config["ml_models"]["output_folder_str"]
 SPECIFIC_FOLDER = TRAINED_MODEL_ROOT / config["ml_models"]["multiclass"]["general"]["folder"]
@@ -48,7 +48,7 @@ SHUFFLE=config["ml_models"]["multiclass"]["general"]["shuffle"]
 RANDOM_STATE=config["ml_models"]["multiclass"]["general"]["random_state"]
 CLASSES=config["ml_models"]["multiclass"]["general"]["classes"]
 
-#Random forest
+#Random forest config
 RF_N_ESTIMATORS=config["ml_models"]["multiclass"]["random_forest"]["n_estimators"]
 RF_MAX_DEPTH=config["ml_models"]["multiclass"]["random_forest"]["max_depth"]
 MIN_SAMP_SPLT=config["ml_models"]["multiclass"]["random_forest"]["min_samples_split"]
@@ -57,7 +57,7 @@ RF_RNDM_STATE=config["ml_models"]["multiclass"]["random_forest"]["random_state"]
 RF_N_JOBS=config["ml_models"]["multiclass"]["random_forest"]["n_jobs"]
 RF_VERBOSE=config["ml_models"]["multiclass"]["random_forest"]["verbose"]
 
-#SVM
+#SVM config
 GAMMA=config["ml_models"]["multiclass"]["svm"]["gamma"]
 SVM_C=config["ml_models"]["multiclass"]["svm"]["c"]
 PROBABILITY=config["ml_models"]["multiclass"]["svm"]["probability"]
@@ -65,7 +65,7 @@ KERNEL=config["ml_models"]["multiclass"]["svm"]["kernel"]
 SVM_RNDM_STATE=config["ml_models"]["multiclass"]["svm"]["random_state"]
 SVM_VERBOSE=config["ml_models"]["multiclass"]["svm"]["verbose"]
 
-#XGboost
+#XGboost config
 XG_N_ESTIMATORS=config["ml_models"]["multiclass"]["xgboost"]["n_estimators"]
 XG_MAX_DEPTH=config["ml_models"]["multiclass"]["xgboost"]["max_depth"]
 XG_LEARNING_RATE=config["ml_models"]["multiclass"]["xgboost"]["learning_rate"]
@@ -75,7 +75,7 @@ XG_RNDM_STATE=config["ml_models"]["multiclass"]["xgboost"]["random_state"]
 XG_N_JOBS=config["ml_models"]["multiclass"]["xgboost"]["n_jobs"]
 XG_VERBOSE=config["ml_models"]["multiclass"]["xgboost"]["verbose"]
 
-#Gradient boosting
+#Gradient boosting config
 GB_N_ESTIMATORS=config["ml_models"]["multiclass"]["gradient"]["n_estimators"]
 GB_MAX_DEPTH=config["ml_models"]["multiclass"]["gradient"]["max_depth"]
 GB_LEARNING_RATE=config["ml_models"]["multiclass"]["gradient"]["learning_rate"]
