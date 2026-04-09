@@ -122,6 +122,9 @@
                 "n_classes": 3
             },
             "tiny_cnn":{
+                "plot_name.png":"training_history_tiny_cnn.png",
+                "epoch":50,
+                "batch_size":8,
                 "n_mels":64,
                 "conv1_filters": 16,
                 "conv1_kernel": [3,3],

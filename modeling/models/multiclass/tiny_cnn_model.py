@@ -22,7 +22,6 @@ Each file must follow the naming format:
 
 import os
 import sys
-import logging
 import pickle
 import librosa
 from pathlib import Path
@@ -47,6 +46,7 @@ AUDIO_FOLDER = REPO_ROOT / "datasets" / "audios"
 sys.path.append(str(REPO_ROOT))
 from modeling.utils.custom_logger import get_logger
 from configuration.config_loader import config
+from modeling.utils.cnn_train_methods import load_dataset, preprocess_data, plot_training
 #from modeling.utils. import 
 logger = get_logger("tiny_cnn_logger", "tiny_cnn_training.log")
 
@@ -55,6 +55,9 @@ TRAINED_MODEL_ROOT = REPO_ROOT / config["cnn_models"]["output_folder_str"]
 SPECIFIC_FOLDER = TRAINED_MODEL_ROOT / config["cnn_models"]["multiclass"]["general"]["folder"]
 
 #Multiclass tiny cnn config
+PLOT_NAME = config["cnn_models"]["multiclass"]["tiny_cnn"]["plot_name.png"]
+EPOCH = config["cnn_models"]["multiclass"]["tiny_cnn"]["epoch"]
+BATCH_SIZE = config["cnn_models"]["multiclass"]["tiny_cnn"]["batch_size"]
 N_MELS = config["cnn_models"]["multiclass"]["tiny_cnn"]["n_mels"]
 CONV1_FILT= config["cnn_models"]["multiclass"]["tiny_cnn"]["conv1_filters"]
 CONV1_KRNL= config["cnn_models"]["multiclass"]["tiny_cnn"]["conv1_kernel"]
@@ -69,85 +72,6 @@ LOSS= config["cnn_models"]["multiclass"]["tiny_cnn"]["loss"]
 METRICS= config["cnn_models"]["multiclass"]["tiny_cnn"]["metrics"]
 N_CLASSES = config["cnn_models"]["multiclass"]["general"]["n_classes"]
 CLASS_MAP = config["cnn_models"]["multiclass"]["general"]["class_map"]
-
-# -------------------------------------------------------------------------
-# Data Loading and preprocess
-# -------------------------------------------------------------------------
-def compute_logmel(audio_path: Path, n_mels: int = 64) -> np.ndarray:
-    """Load audio → compute log-mel → normalize → return (time, mel_bins)."""
-    y, sr = librosa.load(str(audio_path), sr=None)
-    mel = librosa.feature.melspectrogram(y=y, sr=sr, n_mels=n_mels)
-    logmel = librosa.power_to_db(mel)
-    logmel = (logmel - np.mean(logmel)) / (np.std(logmel) + 1e-6)
-    return logmel.T  #CNN expects = (time_steps, mel_bins)
-
-def load_dataset(audio_dir: str, class_map: Dict) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-    audio_path = Path(audio_dir)
-    assert audio_path.exists(), f"Audio directory not found: {audio_dir}"
-
-    logger.info(f"Dataset successfully found and loaded from {audio_path}")
-
-    data_by_class = {0: [], 1: [], 2: []}
-
-    # Load .wav files, NOT CSVs
-    for file in audio_path.glob("*.wav"):
-        name = file.stem.upper()
-
-        if name.startswith("DRONE"):
-            label = class_map["DRONE"]
-        elif name.startswith("HELICOPTER"):
-            label = class_map["HELICOPTER"]
-        elif name.startswith("BACKGROUND"):
-            label = class_map["BACKGROUND"]
-        else:
-            logger.warning(f"Skipping unknown file: {file.name}")
-            continue
-
-        logmel = compute_logmel(audio_path=file,n_mels=N_MELS)
-        data_by_class[label].append(logmel)
-        logger.info(f"Loaded {file.name} -> class {label}, shape={logmel.shape}")
-
-    # Split per class to maintain balance
-    X_train, y_train, X_val, y_val = [], [], [], []
-
-    for label, samples in data_by_class.items():
-        if len(samples) == 0:
-            logger.error(f"No samples found for class {label}")
-            continue
-
-        train_split, val_split = train_test_split(
-            samples, test_size=0.2, shuffle=True, random_state=42
-        )
-
-        X_train.extend(train_split)
-        y_train.extend([label] * len(train_split))
-        X_val.extend(val_split)
-        y_val.extend([label] * len(val_split))
-
-        logger.info(f"Class {label}: {len(train_split)} train, {len(val_split)} validation")
-
-    X_train, y_train = np.array(X_train, dtype=object), np.array(y_train)
-    X_val, y_val = np.array(X_val, dtype=object), np.array(y_val)
-    return X_train, y_train, X_val, y_val
-
-def preprocess_data(X: np.ndarray) -> np.ndarray:
-    """
-        Pad variable-length log-mel spectrograms to a uniform time dimension
-        and add a channel axis for CNN input.
-    """
-    max_frames = max(sample.shape[0] for sample in X)
-    feature_dim = X[0].shape[1]
-
-    X_out = np.zeros((len(X), max_frames, feature_dim), dtype=np.float32)
-
-    for i, spec in enumerate(X):
-        frames = spec.shape[0]
-        X_out[i, :frames, :] = spec
-
-    # Add channel dimension for CNN: (samples, time, mel_bins, 1)
-    X_out = np.expand_dims(X_out, axis=-1)
-
-    return X_out
 
 # -------------------------------------------------------------------------
 # Model Definition
@@ -192,43 +116,13 @@ def build_tiny_cnn(input_shape: Tuple[int, int, int], num_classes: int = 3) -> m
     return model
 
 # -------------------------------------------------------------------------
-# Plotting Function
-# -------------------------------------------------------------------------
-
-def plot_training(history):
-    """
-    Plot training and validation accuracy and loss.
-
-    Saves
-    -----
-    PNG plot of training metrics to
-    """
-    metrics = [k for k in history.keys() if not k.startswith("val_")]
-
-    n_metrics = len(metrics)
-    plt.figure(figsize=(5*n_metrics, 4))
-
-    for i, metric in enumerate(metrics, 1):
-        plt.subplot(1, n_metrics, i)
-        plt.plot(history[metric], label=f"Train {metric.capitalize()}")
-        val_metric = f"val_{metric}"
-        if val_metric in history:
-            plt.plot(history[val_metric], label=f"Val {metric.capitalize()}")
-        plt.title(metric.capitalize())
-        plt.legend()
-    
-    plt.tight_layout()
-    plt.savefig(TRAINED_MODEL_ROOT / SPECIFIC_FOLDER / "training_history_tiny_cnn.png")
-    logger.info("Training plot saved to training_history_tiny_cnn.png")
-
-# -------------------------------------------------------------------------
 # Main Training Pipeline
 # -------------------------------------------------------------------------
 
 def main():
     logger.info("Starting Tiny CNN training...")
     aud_dir = str(AUDIO_FOLDER)
-    X_train_raw, y_train, X_val_raw, y_val = load_dataset(audio_dir=aud_dir,class_map=CLASS_MAP)
+    X_train_raw, y_train, X_val_raw, y_val = load_dataset(audio_dir=aud_dir,class_map=CLASS_MAP,n_mels=N_MELS)
     X_train = preprocess_data(X_train_raw)
     X_val = preprocess_data(X_val_raw)
 
@@ -239,8 +133,8 @@ def main():
     model = build_tiny_cnn(input_shape=X_train.shape[1:], num_classes=N_CLASSES)
     history = model.fit(X_train, y_train,
                         validation_data=(X_val, y_val),
-                        epochs=50,
-                        batch_size=8,
+                        epochs=EPOCH,
+                        batch_size=BATCH_SIZE,
                         verbose=1).history
 
     # Create trained_model/tiny_cnn directory at repo root
@@ -262,7 +156,8 @@ def main():
     model.save(h5_path)
     logger.info(f"Model also saved as H5 to: {h5_path}")
 
-    plot_training(history)
+    PLOT_PATH = model_dir / PLOT_NAME
+    plot_training(history=history,save_path=PLOT_PATH)
     logger.info("Training completed successfully!")
 
 if __name__ == "__main__":
