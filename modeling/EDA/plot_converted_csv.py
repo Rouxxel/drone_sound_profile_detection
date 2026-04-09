@@ -72,6 +72,9 @@ for csv_file in csv_files:
 
     # RMS from corresponding WAV if available
     audio_path = AUDIOS_FOLDER / f"{base_name}.wav"
+    rms = np.array([])
+    rms_timestamps = np.array([])
+    
     if audio_path.exists():
         y, _ = librosa.load(str(audio_path), sr=SAMP_RATE)
         rms = librosa.feature.rms(y=y, hop_length=HOP_LENGTH)[0]
