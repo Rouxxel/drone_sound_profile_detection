@@ -12,7 +12,7 @@ from pathlib import Path
 # Repo root (modeling/utils/ -> modeling/ -> repo root)
 _SCRIPT_DIR = Path(__file__).resolve().parent
 REPO_ROOT = _SCRIPT_DIR.parent.parent
-LOGS_DIR = REPO_ROOT / "logs"
+LOGS_DIR = REPO_ROOT / "_logs"
 
 
 class _PipelineFormatter(logging.Formatter):
@@ -36,31 +36,39 @@ def get_logger(logger_name: str, log_filename: str | None = None) -> logging.Log
     Return a logger that writes to a file (and console) with the shared format.
     - logger_name: unique name for the logger (e.g. "tiny_cnn_logger").
     - log_filename: name of the log file under logs/ (e.g. "tiny_cnn_training.log").
-      If None, writes to modeling_training.log in repo root (for main.py).
+    If None, writes to modeling_training.log in repo root (for main.py).
     Log files are created/overwritten in logs/ (or repo root when log_filename is None).
     """
     logger = logging.getLogger(logger_name)
     logger.setLevel(logging.INFO)
     logger.propagate = False
 
+    # If the logger already has handlers, don't add them again (prevents duplicate logs)
     if logger.hasHandlers():
         return logger
 
+    # Determine file path
     if log_filename is None:
         log_path = REPO_ROOT / "modeling_training.log"
-        file_mode = "a"
     else:
         LOGS_DIR.mkdir(parents=True, exist_ok=True)
         log_path = LOGS_DIR / log_filename
-        file_mode = "w"
 
-    file_handler = logging.FileHandler(log_path, mode=file_mode, encoding="utf-8")
+    # Mandatory: Use mode="a" to ensure we never wipe previous data
+    file_handler = logging.FileHandler(log_path, mode="a", encoding="utf-8")
     file_handler.setFormatter(_LOG_FORMAT)
     logger.addHandler(file_handler)
 
     console_handler = logging.StreamHandler(sys.stdout)
     console_handler.setFormatter(_LOG_FORMAT)
     logger.addHandler(console_handler)
+
+    # Visual break for new session
+    break_line = "=" * 60
+    logger.info("") # Empty line for extra padding
+    logger.info(break_line)
+    logger.info(f" SESSION START ---------")
+    logger.info(break_line)
 
     return logger
 

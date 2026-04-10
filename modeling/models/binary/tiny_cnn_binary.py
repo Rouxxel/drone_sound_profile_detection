@@ -97,7 +97,7 @@ def build_tiny_cnn_binary(input_shape: Tuple[int, int, int]) -> models.Sequentia
 # Main Training Pipeline
 # -------------------------------------------------------------------------
 def main():
-    logger.info("Starting Binary Tiny CNN training...")
+    logger.info("Starting Tiny CNN Binary Training...")
     aud_dir = str(AUDIO_FOLDER)
     X_train_raw, y_train, X_val_raw, y_val = load_dataset(audio_dir=aud_dir,class_map=CLASS_MAP,n_mels=N_MELS,is_binary=True)
     X_train = preprocess_data(X_train_raw)

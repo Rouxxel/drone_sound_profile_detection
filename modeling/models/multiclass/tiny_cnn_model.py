@@ -116,7 +116,7 @@ def build_tiny_cnn(input_shape: Tuple[int, int, int], num_classes: int = 3) -> m
 # -------------------------------------------------------------------------
 
 def main():
-    logger.info("Starting Tiny CNN training...")
+    logger.info("Starting Tiny CNN Multiclass Training...")
     aud_dir = str(AUDIO_FOLDER)
     X_train_raw, y_train, X_val_raw, y_val = load_dataset(audio_dir=aud_dir,class_map=CLASS_MAP,n_mels=N_MELS,is_binary=False)
     X_train = preprocess_data(X_train_raw)

@@ -215,7 +215,7 @@ def train_gradient_boosting(X_train, y_train, X_val, y_val) -> Dict:
 # -------------------------------------------------------------------------
 
 def main():
-    logger.info("Starting Traditional ML Models Training...")
+    logger.info("Starting Traditional Multiclass ML Models Training...")
     
     # Load dataset
     csv_dir = str(CSV_DIR)

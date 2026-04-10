@@ -199,7 +199,7 @@ def train_gradient_boosting(X_train, y_train, X_val, y_val) -> Dict:
     }
 
 def main():
-    logger.info("Starting Binary ML Models Training...")
+    logger.info("Starting Traditional Binary ML Models Training...")
     
     csv_dir = str(CSV_DIR)
     X_train_raw, y_train, X_val_raw, y_val = load_dataset(csv_dir=CSV_DIR,test_split=TEST_SPLIT,shffl=SHUFFLE, rand_state=RANDOM_STATE,is_binary=True)
