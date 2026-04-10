@@ -134,6 +134,7 @@
                 "dropout": 0.2,
                 "learning_rate": 0.001,
                 "activation": "relu",
+                "last_activation":"softmax",
                 "padding": "same",
                 "loss":"sparse_categorical_crossentropy",
                 "metrics":["accuracy","Precision","Recall","AUC"]
@@ -141,7 +142,27 @@
         },
         "binary":{
             "general":{
-                "folder":"binary"
+                "folder":"binary",
+                "class_map":{"NO_DRONE":0, "DRONE": 1},
+                "n_classes": 0
+            },
+            "tiny_cnn":{
+                "plot_name.png":"training_history_tiny_cnn_binary.png",
+                "epoch":50,
+                "batch_size":8,
+                "n_mels":64,
+                "conv1_filters": 16,
+                "conv1_kernel": [3,3],
+                "conv2_filters": 32,
+                "conv2_kernel": [3,3],
+                "dense_units": 32,
+                "dropout": 0.2,
+                "learning_rate": 0.001,
+                "activation": "relu",
+                "last_activation":"sigmoid",
+                "padding": "same",
+                "loss":"binary_crossentropy",
+                "metrics":["accuracy","Precision","Recall","AUC"]
             }
         }
     }
