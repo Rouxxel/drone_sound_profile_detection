@@ -80,8 +80,8 @@ def build_tiny_cnn(input_shape: Tuple[int, int, int], num_classes: int = 3) -> m
     logger.info("Building Tiny CNN model...")
     
     logger.info(f"Layer 1 Conv2D layer with {LAYERS['conv1']['filters']} filters and kernel size {LAYERS['conv1']['kernel']}, padding '{PADDING}', activation '{ACTIVATION}' and MaxPooling {LAYERS['conv1']['max_pool']}")
-    logger.info(f"Layer 2 Conv2D layer with {LAYERS['conv2']['filters']} filters and kernel size {LAYERS['conv2']['kernel']}, padding '{PADDING}' and activation '{ACTIVATION}'")
-    logger.info(f"Dense layer with {LAYERS['dense']['units']} units, dropout {LAYERS['dense']['dropout']}, activation '{ACTIVATION}' and last activation '{LAST_ACTIVATION}'")
+    logger.info(f"Layer 2 Conv2D layer with {LAYERS['conv2']['filters']} filters and kernel size {LAYERS['conv2']['kernel']}, padding '{PADDING}', activation '{ACTIVATION}'")
+    logger.info(f"Dense layer with {LAYERS['dense']['units']} units, dropout {LAYERS['dense']['dropout']}, activation '{ACTIVATION}', last activation '{LAST_ACTIVATION}' and GlobalAveragePooling2D")
     model = models.Sequential([
         layers.Input(shape=input_shape),
 

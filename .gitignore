@@ -16,6 +16,7 @@ __pycache__/
 *.png
 *.h5
 *.pkl
+*.keras
 modeling/EDA/eda_report*
 
 # Model files and training outputs

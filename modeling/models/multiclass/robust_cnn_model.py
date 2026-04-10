@@ -3,6 +3,10 @@
 Robust CNN Audio Classifier Training Script
 -------------------------------------------
 
+
+It computes log-mel spectrograms (64–128 Mel bands), normalizes them,
+and trains a robust CNN model.
+
 This script implements a more robust CNN architecture with:
 - Deeper network with more convolutional layers
 - Data augmentation
@@ -12,125 +16,57 @@ This script implements a more robust CNN architecture with:
 - Cross-validation support
 
 Data is auto-discovered from:
-    datasets/converted_csv/*.csv
+    datasets/audios/*.wav
+
+Each file must follow the naming format:
+    DRONE_*.wav
+    HELICOPTER_*.wav
+    BACKGROUND_*.wav
 """
 
 import os
+import sys
 import pickle
-import logging
 from pathlib import Path
 from typing import Tuple
-import numpy as np
-import pandas as pd
-from keras import layers, models, optimizers, callbacks
-from sklearn.model_selection import train_test_split
-import matplotlib.pyplot as plt
+from keras import layers, models, optimizers
 
 # Suppress TensorFlow oneDNN info logs
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
 # -------------------------------------------------------------------------
-# Paths (script in modeling/models/multiclass/; repo root = 3 levels up)
+# main Paths
 # -------------------------------------------------------------------------
-SCRIPT_DIR = Path(__file__).resolve().parent
-REPO_ROOT = SCRIPT_DIR.parent.parent.parent
-CSV_DIR = REPO_ROOT / "datasets" / "converted_csv"
-TRAINED_MODEL_ROOT = REPO_ROOT / "trained_models"
+SCRIPT_DIR = Path(__file__).resolve().parent #multiclass/
+REPO_ROOT = SCRIPT_DIR.parent.parent.parent #root/
+AUDIO_FOLDER = REPO_ROOT / "datasets" / "audios"
 
-# -------------------------------------------------------------------------
-# Logging (shared format; log file: logs/robust_cnn_training.log)
-# -------------------------------------------------------------------------
+#custom logger, config and utils
+sys.path.append(str(REPO_ROOT))
 from modeling.utils.custom_logger import get_logger
-logger = get_logger("robust_cnn_logger", "robust_cnn_training.log")
+from configuration.config_loader import config
+from modeling.utils.cnn_train_methods import load_dataset, preprocess_data, plot_training, augment_data, get_callbacks
+logger = get_logger("cnn_logger", "cnn_models_training.log")
 
-# -------------------------------------------------------------------------
-# Dataset Loading
-# -------------------------------------------------------------------------
+# General Configuration
+TRAINED_MODEL_ROOT = REPO_ROOT / config["cnn_models"]["output_folder_str"]
+SPECIFIC_FOLDER = TRAINED_MODEL_ROOT / config["cnn_models"]["multiclass"]["general"]["folder"]
 
-def load_dataset(csv_dir: str) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-    csv_path = Path(csv_dir)
-    assert csv_path.exists(), f"CSV directory not found: {csv_dir}"
-
-    logger.info(f"Dataset successfully found and loaded from {csv_path}")
-
-    class_map = {"BACKGROUND": 0, "HELICOPTER": 1, "DRONE": 2}
-    data_by_class = {0: [], 1: [], 2: []}
-
-    for file in csv_path.glob("*.csv"):
-        name = file.stem.upper()
-        if name.startswith("DRONE"):
-            label = class_map["DRONE"]
-        elif name.startswith("HELICOPTER"):
-            label = class_map["HELICOPTER"]
-        elif name.startswith("BACKGROUND"):
-            label = class_map["BACKGROUND"]
-        else:
-            logger.warning(f"Skipping unknown file: {file.name}")
-            continue
-        mfcc = pd.read_csv(file).values.astype(np.float32)
-        data_by_class[label].append(mfcc)
-        logger.info(f"Loaded {file.name} -> class {label}")
-
-    X_train, y_train, X_val, y_val = [], [], [], []
-    for label, samples in data_by_class.items():
-        if len(samples) == 0:
-            logger.error(f"No samples found for class {label}.")
-            continue
-        train_split, val_split = train_test_split(samples, test_size=0.2, shuffle=True, random_state=42)
-        X_train.extend(train_split)
-        y_train.extend([label]*len(train_split))
-        X_val.extend(val_split)
-        y_val.extend([label]*len(val_split))
-        logger.info(f"Class {label}: {len(train_split)} train, {len(val_split)} validation")
-
-    X_train, y_train = np.array(X_train, dtype=object), np.array(y_train)
-    X_val, y_val = np.array(X_val, dtype=object), np.array(y_val)
-    return X_train, y_train, X_val, y_val
-
-# -------------------------------------------------------------------------
-# Data Preprocessing & Augmentation
-# -------------------------------------------------------------------------
-
-def preprocess_data(X: np.ndarray) -> np.ndarray:
-    max_frames = max(x.shape[0] for x in X)
-    feature_dim = X[0].shape[1]
-    X_out = np.zeros((len(X), max_frames, feature_dim), dtype=np.float32)
-    for i, mfcc in enumerate(X):
-        frames = mfcc.shape[0]
-        X_out[i, :frames, :] = mfcc
-    X_out = np.expand_dims(X_out, axis=-1)
-    return X_out
-
-def augment_data(X: np.ndarray, y: np.ndarray, augmentation_factor: int = 2) -> Tuple[np.ndarray, np.ndarray]:
-    """
-    Augment data with time shifting and noise addition
-    """
-    logger.info(f"Augmenting data with factor {augmentation_factor}...")
-    X_aug, y_aug = [], []
-    
-    for i in range(len(X)):
-        # Original sample
-        X_aug.append(X[i])
-        y_aug.append(y[i])
-        
-        # Augmented samples
-        for _ in range(augmentation_factor - 1):
-            sample = X[i].copy()
-            
-            # Time shift
-            shift = np.random.randint(-10, 10)
-            if shift != 0:
-                sample = np.roll(sample, shift, axis=0)
-            
-            # Add noise
-            noise = np.random.normal(0, 0.005, sample.shape)
-            sample = sample + noise
-            
-            X_aug.append(sample)
-            y_aug.append(y[i])
-    
-    logger.info(f"Data augmented: {len(X)} -> {len(X_aug)} samples")
-    return np.array(X_aug), np.array(y_aug)
+#Multiclass robust cnn config
+PLOT_NAME = config["cnn_models"]["multiclass"]["robust_cnn"]["plot_name.png"]
+EPOCH = config["cnn_models"]["multiclass"]["robust_cnn"]["epoch"]
+BATCH_SIZE = config["cnn_models"]["multiclass"]["robust_cnn"]["batch_size"]
+N_MELS = config["cnn_models"]["multiclass"]["robust_cnn"]["n_mels"]
+LAYERS = config["cnn_models"]["multiclass"]["robust_cnn"]["layers"]
+AUG_FACTOR = config["cnn_models"]["multiclass"]["robust_cnn"]["aug_factor"]
+LEARNING_RATE= config["cnn_models"]["multiclass"]["robust_cnn"]["learning_rate"]
+ACTIVATION= config["cnn_models"]["multiclass"]["robust_cnn"]["activation"]
+LAST_ACTIVATION= config["cnn_models"]["multiclass"]["robust_cnn"]["last_activation"]
+PADDING= config["cnn_models"]["multiclass"]["robust_cnn"]["padding"]
+LOSS= config["cnn_models"]["multiclass"]["robust_cnn"]["loss"]
+METRICS= config["cnn_models"]["multiclass"]["robust_cnn"]["metrics"]
+N_CLASSES = config["cnn_models"]["multiclass"]["general"]["n_classes"]
+CLASS_MAP = config["cnn_models"]["multiclass"]["general"]["class_map"]
 
 # -------------------------------------------------------------------------
 # Model Definition
@@ -138,46 +74,81 @@ def augment_data(X: np.ndarray, y: np.ndarray, augmentation_factor: int = 2) -> 
 
 def build_robust_cnn(input_shape: Tuple[int, int, int], num_classes: int = 3) -> models.Sequential:
     logger.info("Building Robust CNN model...")
+    logger.info(f"Layer 1 Conv2D layer with {LAYERS['conv1']['filters']} filters and kernel size {LAYERS['conv1']['kernel']}, padding '{PADDING}', activation '{ACTIVATION}' and MaxPooling {LAYERS['conv1']['max_pool']}")
+    logger.info(f"Layer 2 Conv2D layer with {LAYERS['conv2']['filters']} filters and kernel size {LAYERS['conv2']['kernel']}, padding '{PADDING}', activation '{ACTIVATION}' and MaxPooling {LAYERS['conv2']['max_pool']}")
+    logger.info(f"Layer 3 Conv2D layer with {LAYERS['conv3']['filters']} filters and kernel size {LAYERS['conv3']['kernel']}, padding '{PADDING}', activation '{ACTIVATION}' and GlobalAveragePooling2D")
+    logger.info(f"Dense layer with {LAYERS['dense']['units_1']} units, dropout {LAYERS['dense']['dropout_1']}, activation '{ACTIVATION}' and last activation '{LAST_ACTIVATION}'")
+    
     model = models.Sequential([
         # Input layer
         layers.Input(shape=input_shape),
         
         # First Conv Block
-        layers.Conv2D(32, (3,3), activation='relu', padding='same'),
+        layers.Conv2D(
+            LAYERS["conv1"]["filters"], 
+            tuple(LAYERS["conv1"]["kernel"]), 
+            activation=ACTIVATION, 
+            padding=PADDING
+            ),
         layers.BatchNormalization(),
-        layers.Conv2D(32, (3,3), activation='relu', padding='same'),
+        layers.Conv2D(
+            LAYERS["conv1"]["filters"], 
+            tuple(LAYERS["conv1"]["kernel"]), 
+            activation=ACTIVATION, 
+            padding=PADDING
+            ),
         layers.BatchNormalization(),
-        layers.MaxPooling2D((2,2)),
-        layers.Dropout(0.25),
+        layers.MaxPooling2D(tuple(LAYERS["conv1"]["max_pool"])),
+        layers.Dropout(LAYERS["conv1"]["dropout"]),
         
         # Second Conv Block
-        layers.Conv2D(64, (3,3), activation='relu', padding='same'),
+        layers.Conv2D(
+            LAYERS["conv2"]["filters"], 
+            tuple(LAYERS["conv2"]["kernel"]), 
+            activation=ACTIVATION, 
+            padding=PADDING
+            ),
         layers.BatchNormalization(),
-        layers.Conv2D(64, (3,3), activation='relu', padding='same'),
+        layers.Conv2D(
+            LAYERS["conv2"]["filters"], 
+            tuple(LAYERS["conv2"]["kernel"]), 
+            activation=ACTIVATION, 
+            padding=PADDING
+            ),
         layers.BatchNormalization(),
-        layers.MaxPooling2D((2,2)),
-        layers.Dropout(0.25),
+        layers.MaxPooling2D(tuple(LAYERS["conv2"]["max_pool"])),
+        layers.Dropout(LAYERS["conv2"]["dropout"]),
         
         # Third Conv Block
-        layers.Conv2D(128, (3,3), activation='relu', padding='same'),
+        layers.Conv2D(
+            LAYERS["conv3"]["filters"], 
+            tuple(LAYERS["conv3"]["kernel"]), 
+            activation=ACTIVATION, 
+            padding=PADDING
+            ),
         layers.BatchNormalization(),
-        layers.Conv2D(128, (3,3), activation='relu', padding='same'),
+        layers.Conv2D(
+            LAYERS["conv3"]["filters"], 
+            tuple(LAYERS["conv3"]["kernel"]), 
+            activation=ACTIVATION, 
+            padding=PADDING
+            ),
         layers.BatchNormalization(),
         layers.GlobalAveragePooling2D(),
-        layers.Dropout(0.4),
+        layers.Dropout(LAYERS["conv3"]["dropout"]),
         
         # Dense Layers
-        layers.Dense(128, activation='relu'),
+        layers.Dense(LAYERS["dense"]["units_1"], activation=ACTIVATION),
         layers.BatchNormalization(),
-        layers.Dropout(0.5),
-        layers.Dense(64, activation='relu'),
-        layers.Dropout(0.3),
-        layers.Dense(num_classes, activation='softmax')
+        layers.Dropout(LAYERS["dense"]["dropout_1"]),
+        layers.Dense(LAYERS["dense"]["units_2"], activation=ACTIVATION),
+        layers.Dropout(LAYERS["dense"]["dropout_2"]),
+        layers.Dense(num_classes, activation=LAST_ACTIVATION)
     ])
     
     model.compile(
-        optimizer=optimizers.Adam(learning_rate=1e-3),
-        loss='sparse_categorical_crossentropy',
+        optimizer=optimizers.Adam(LEARNING_RATE),
+        loss=LOSS,
         metrics=['accuracy']
     )
     
@@ -186,130 +157,48 @@ def build_robust_cnn(input_shape: Tuple[int, int, int], num_classes: int = 3) ->
     return model
 
 # -------------------------------------------------------------------------
-# Callbacks
-# -------------------------------------------------------------------------
-
-def get_callbacks(model_dir: Path):
-    """Setup training callbacks"""
-    
-    # Early stopping
-    early_stop = callbacks.EarlyStopping(
-        monitor='val_loss',
-        patience=15,
-        restore_best_weights=True,
-        verbose=1
-    )
-    
-    # Learning rate reduction
-    reduce_lr = callbacks.ReduceLROnPlateau(
-        monitor='val_loss',
-        factor=0.5,
-        patience=5,
-        min_lr=1e-7,
-        verbose=1
-    )
-    
-    # Model checkpoint
-    checkpoint = callbacks.ModelCheckpoint(
-        filepath=str(model_dir / 'best_model.keras'),
-        monitor='val_accuracy',
-        save_best_only=True,
-        verbose=1
-    )
-    
-    return [early_stop, reduce_lr, checkpoint]
-
-# -------------------------------------------------------------------------
-# Plotting Function
-# -------------------------------------------------------------------------
-
-def plot_training(history, save_path=None):
-    if save_path is None:
-        save_path = TRAINED_MODEL_ROOT / "robust_cnn" / "training_history_robust_cnn.png"
-    fig, axes = plt.subplots(2, 2, figsize=(14, 10))
-    
-    # Accuracy
-    axes[0, 0].plot(history["accuracy"], label="Train Acc", linewidth=2)
-    axes[0, 0].plot(history["val_accuracy"], label="Val Acc", linewidth=2)
-    axes[0, 0].set_title("Model Accuracy", fontsize=14, fontweight='bold')
-    axes[0, 0].set_xlabel("Epoch")
-    axes[0, 0].set_ylabel("Accuracy")
-    axes[0, 0].legend()
-    axes[0, 0].grid(True, alpha=0.3)
-    
-    # Loss
-    axes[0, 1].plot(history["loss"], label="Train Loss", linewidth=2)
-    axes[0, 1].plot(history["val_loss"], label="Val Loss", linewidth=2)
-    axes[0, 1].set_title("Model Loss", fontsize=14, fontweight='bold')
-    axes[0, 1].set_xlabel("Epoch")
-    axes[0, 1].set_ylabel("Loss")
-    axes[0, 1].legend()
-    axes[0, 1].grid(True, alpha=0.3)
-    
-    # Learning rate (if available)
-    if "lr" in history:
-        axes[1, 0].plot(history["lr"], linewidth=2, color='green')
-        axes[1, 0].set_title("Learning Rate", fontsize=14, fontweight='bold')
-        axes[1, 0].set_xlabel("Epoch")
-        axes[1, 0].set_ylabel("Learning Rate")
-        axes[1, 0].set_yscale('log')
-        axes[1, 0].grid(True, alpha=0.3)
-    
-    # Accuracy difference
-    acc_diff = np.array(history["accuracy"]) - np.array(history["val_accuracy"])
-    axes[1, 1].plot(acc_diff, linewidth=2, color='red')
-    axes[1, 1].axhline(y=0, color='black', linestyle='--', alpha=0.5)
-    axes[1, 1].set_title("Overfitting Monitor (Train - Val Acc)", fontsize=14, fontweight='bold')
-    axes[1, 1].set_xlabel("Epoch")
-    axes[1, 1].set_ylabel("Accuracy Difference")
-    axes[1, 1].grid(True, alpha=0.3)
-    
-    plt.tight_layout()
-    plt.savefig(str(save_path), dpi=150)
-    logger.info(f"Training plot saved to {save_path}")
-
-# -------------------------------------------------------------------------
 # Main Training Pipeline
 # -------------------------------------------------------------------------
 
 def main():
-    logger.info("Starting Robust CNN training...")
+    """Main training pipeline for the robust CNN model."""
+    logger.info("Starting Robust CNN Multiclass Training...")
     
     # Load dataset
-    csv_dir = str(CSV_DIR)
-    X_train_raw, y_train, X_val_raw, y_val = load_dataset(csv_dir)
-    
-    # Preprocess
+    aud_dir = str(AUDIO_FOLDER)
+    X_train_raw, y_train, X_val_raw, y_val = load_dataset(audio_dir=aud_dir, class_map=CLASS_MAP, n_mels=N_MELS, is_binary=False)
     X_train = preprocess_data(X_train_raw)
     X_val = preprocess_data(X_val_raw)
+    logger.info(f"Training samples: {len(X_train)}")
+    logger.info(f"Validation samples: {len(X_val)}")
+    logger.info(f"Input shape to model: {X_train.shape[1:]}")
     
     # Augment training data
-    X_train, y_train = augment_data(X_train, y_train, augmentation_factor=3)
-    
+    X_train, y_train = augment_data(X_train, y_train, augmentation_factor=AUG_FACTOR)
     logger.info(f"Training samples (after augmentation): {len(X_train)}")
     logger.info(f"Validation samples: {len(X_val)}")
     logger.info(f"Input shape to model: {X_train.shape[1:]}")
     
     # Build model
-    model = build_robust_cnn(input_shape=X_train.shape[1:], num_classes=3)
-    
-    # Create trained_models/robust_cnn at repo root (only if not exists)
-    model_dir = TRAINED_MODEL_ROOT / "robust_cnn"
-    model_dir.mkdir(parents=True, exist_ok=True)
+    model = build_robust_cnn(input_shape=X_train.shape[1:], num_classes=N_CLASSES)
     
     # Setup callbacks
-    callback_list = get_callbacks(model_dir)
+    callback_list = get_callbacks(model_dir=SPECIFIC_FOLDER)
     
     # Train model
     logger.info("Starting training with callbacks...")
     history = model.fit(
         X_train, y_train,
         validation_data=(X_val, y_val),
-        epochs=100,
-        batch_size=16,
+        epochs=EPOCH,
+        batch_size=BATCH_SIZE,
         callbacks=callback_list,
         verbose=1
     ).history
+    
+    # Create trained_models/robust_cnn at repo root (only if not exists)
+    model_dir = TRAINED_MODEL_ROOT / SPECIFIC_FOLDER
+    model_dir.mkdir(parents=True, exist_ok=True)
     
     # Save final model
     model_path = model_dir / "robust_cnn_audio_model.pkl"
@@ -323,7 +212,8 @@ def main():
     logger.info(f"Model also saved as H5 to: {h5_path}")
     
     # Plot training history
-    plot_training(history)
+    PLOT_PATH = model_dir / PLOT_NAME
+    plot_training(history=history,save_path=PLOT_PATH)
     
     # Final evaluation
     val_loss, val_acc = model.evaluate(X_val, y_val, verbose=0)

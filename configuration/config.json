@@ -139,12 +139,22 @@
                 "metrics":["accuracy","Precision","Recall","AUC"]
             },
             "robust_cnn":{
-                "conv1_filters": 16,
-                "conv1_kernel": [3,3],
-                "conv2_filters": 32,
-                "conv2_kernel": [3,3],
-                "dense_units": 32,
-                "dropout": 0.2,
+                "plot_name.png":"training_history_robust_cnn.png",
+                "epoch":100,
+                "batch_size":16,
+                "n_mels":128,
+                "layers":{
+                    "conv1":{"filters": 32, "kernel": [3,3],"max_pool": [2,2],"dropout": 0.25},
+                    "conv2":{"filters": 64, "kernel": [3,3],"max_pool": [2,2],"dropout": 0.25},
+                    "conv3":{"filters": 128, "kernel": [3,3],"dropout": 0.4},
+                    "dense":{
+                        "units_1": 256, 
+                        "units_2": 128,
+                        "dropout_1": 0.5,
+                        "dropout_2": 0.3
+                    }
+                },
+                "aug_factor":2,
                 "learning_rate": 0.001,
                 "activation": "relu",
                 "last_activation":"softmax",
