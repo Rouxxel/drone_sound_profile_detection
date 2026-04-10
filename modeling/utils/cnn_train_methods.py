@@ -8,6 +8,7 @@ import sys
 import matplotlib.pyplot as plt
 import librosa
 import numpy as np
+from keras import callbacks
 from typing import Tuple, Dict
 from sklearn.model_selection import train_test_split
 
@@ -161,7 +162,7 @@ def augment_data(X: np.ndarray, y: np.ndarray, augmentation_factor: int = 2) -> 
     return np.array(X_aug), np.array(y_aug)
 
 # -------------------------------------------------------------------------
-# Plotting
+# Plotting and callbacks
 # -------------------------------------------------------------------------
 def plot_training(history, save_path):
     """
@@ -206,3 +207,33 @@ def plot_training(history, save_path):
     plt.savefig(save_path, dpi=150)
     plt.close() # Close to free up memory
     logger.info(f"Training plot saved to {save_path}")
+
+def get_callbacks(model_dir: Path):
+    """Setup training callbacks"""
+    
+    #Early stopping
+    early_stop = callbacks.EarlyStopping(
+        monitor='val_loss',
+        patience=15,
+        restore_best_weights=True,
+        verbose=1
+    )
+    
+    # Learning rate reduction
+    reduce_lr = callbacks.ReduceLROnPlateau(
+        monitor='val_loss',
+        factor=0.5,
+        patience=5,
+        min_lr=1e-7,
+        verbose=1
+    )
+    
+    # Model checkpoint
+    checkpoint = callbacks.ModelCheckpoint(
+        filepath=str(model_dir / 'best_model.keras'),
+        monitor='val_accuracy',
+        save_best_only=True,
+        verbose=1
+    )
+    
+    return [early_stop, reduce_lr, checkpoint]
