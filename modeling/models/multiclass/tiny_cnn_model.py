@@ -23,14 +23,9 @@ Each file must follow the naming format:
 import os
 import sys
 import pickle
-import librosa
 from pathlib import Path
-from typing import Tuple, Dict
-import numpy as np
-import pandas as pd
+from typing import Tuple
 from keras import layers, models, optimizers
-from sklearn.model_selection import train_test_split
-import matplotlib.pyplot as plt
 
 # Suppress TensorFlow oneDNN info logs
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
@@ -48,7 +43,7 @@ from modeling.utils.custom_logger import get_logger
 from configuration.config_loader import config
 from modeling.utils.cnn_train_methods import load_dataset, preprocess_data, plot_training
 #from modeling.utils. import 
-logger = get_logger("tiny_cnn_logger", "tiny_cnn_training.log")
+logger = get_logger("cnn_logger", "cnn_models_training.log")
 
 # General Configuration
 TRAINED_MODEL_ROOT = REPO_ROOT / config["cnn_models"]["output_folder_str"]
@@ -67,6 +62,7 @@ DENSE_UNITS= config["cnn_models"]["multiclass"]["tiny_cnn"]["dense_units"]
 DROPOUT= config["cnn_models"]["multiclass"]["tiny_cnn"]["dropout"]
 LEARNING_RATE= config["cnn_models"]["multiclass"]["tiny_cnn"]["learning_rate"]
 ACTIVATION= config["cnn_models"]["multiclass"]["tiny_cnn"]["activation"]
+LAST_ACTIVATION= config["cnn_models"]["multiclass"]["tiny_cnn"]["last_activation"]
 PADDING= config["cnn_models"]["multiclass"]["tiny_cnn"]["padding"]
 LOSS= config["cnn_models"]["multiclass"]["tiny_cnn"]["loss"]
 METRICS= config["cnn_models"]["multiclass"]["tiny_cnn"]["metrics"]
@@ -103,7 +99,7 @@ def build_tiny_cnn(input_shape: Tuple[int, int, int], num_classes: int = 3) -> m
         layers.GlobalAveragePooling2D(),
         layers.Dense(DENSE_UNITS, activation=ACTIVATION),
         layers.Dropout(DROPOUT),
-        layers.Dense(num_classes, activation='softmax')
+        layers.Dense(num_classes, activation=LAST_ACTIVATION)
     ])
 
     model.compile(
@@ -122,7 +118,7 @@ def build_tiny_cnn(input_shape: Tuple[int, int, int], num_classes: int = 3) -> m
 def main():
     logger.info("Starting Tiny CNN training...")
     aud_dir = str(AUDIO_FOLDER)
-    X_train_raw, y_train, X_val_raw, y_val = load_dataset(audio_dir=aud_dir,class_map=CLASS_MAP,n_mels=N_MELS)
+    X_train_raw, y_train, X_val_raw, y_val = load_dataset(audio_dir=aud_dir,class_map=CLASS_MAP,n_mels=N_MELS,is_binary=False)
     X_train = preprocess_data(X_train_raw)
     X_val = preprocess_data(X_val_raw)
 
