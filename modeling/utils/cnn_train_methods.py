@@ -129,29 +129,80 @@ def preprocess_data(X: np.ndarray) -> np.ndarray:
 
     return X_out
 
+def augment_data(X: np.ndarray, y: np.ndarray, augmentation_factor: int = 2) -> Tuple[np.ndarray, np.ndarray]:
+    """
+    Augment data with time shifting and noise addition
+    """
+    logger.info(f"Augmenting data with factor {augmentation_factor}...")
+    X_aug, y_aug = [], []
+    
+    for i, x_sample in enumerate(X):
+        #original sample
+        X_aug.append(x_sample)
+        y_aug.append(y[i]) 
+        
+        #Generate augmented samples
+        for _ in range(augmentation_factor - 1):
+            sample = x_sample.copy()
+            
+            # --- Augmentation Logic ---
+            shift = np.random.randint(-10, 10)
+            if shift != 0:
+                sample = np.roll(sample, shift, axis=0)
+            
+            noise = np.random.normal(0, 0.005, sample.shape)
+            sample = sample + noise
+            
+            #Append
+            X_aug.append(sample)
+            y_aug.append(y[i])
+    
+    logger.info(f"Data augmented: {len(X)} -> {len(X_aug)} samples")
+    return np.array(X_aug), np.array(y_aug)
+
 # -------------------------------------------------------------------------
 # Plotting
 # -------------------------------------------------------------------------
 def plot_training(history, save_path):
     """
-    Plot training & validation curves for all metrics found in history.history.
+    Handles any metrics by adding an overfitting monitor
+    and saves to disk.
     """
-    metrics = [k for k in history.keys() if not k.startswith("val_")]
+    # If passing the Keras history object, extract the dictionary
+    hist_dict = history.history if hasattr(history, 'history') else history
+    
+    metrics = [k for k in hist_dict.keys() if not k.startswith("val_")]
+    n_metrics = len(metrics) + 1  # +1 for the Overfitting Monitor
+    
+    # Calculate grid size (e.g., 2 columns, rows as needed)
+    cols = 2
+    rows = (n_metrics + 1) // cols
+    
+    fig, axes = plt.subplots(rows, cols, figsize=(12, 5 * rows))
+    axes = axes.flatten()
 
-    n_metrics = len(metrics)
-    plt.figure(figsize=(5*n_metrics, 4))
+    for i, metric in enumerate(metrics):
+        axes[i].plot(hist_dict[metric], label=f"Train", linewidth=2)
+        if f"val_{metric}" in hist_dict:
+            axes[i].plot(hist_dict[f"val_{metric}"], label=f"Val", linewidth=2)
+        
+        axes[i].set_title(metric.replace("_", " ").capitalize(), fontsize=12, fontweight='bold')
+        axes[i].legend()
+        axes[i].grid(True, alpha=0.3)
 
-    for i, metric in enumerate(metrics, 1):
-        plt.subplot(1, n_metrics, i)
-        plt.plot(history[metric], label=f"Train {metric.capitalize()}")
+    # Add the Overfitting Monitor (specifically for Accuracy)
+    if "accuracy" in hist_dict and "val_accuracy" in hist_dict:
+        diff = np.array(hist_dict["accuracy"]) - np.array(hist_dict["val_accuracy"])
+        axes[len(metrics)].plot(diff, color='red', linewidth=2)
+        axes[len(metrics)].axhline(y=0, color='black', linestyle='--')
+        axes[len(metrics)].set_title("Overfitting Monitor (Acc Diff)", fontsize=12, fontweight='bold')
+        axes[len(metrics)].grid(True, alpha=0.3)
 
-        val_metric = f"val_{metric}"
-        if val_metric in history:
-            plt.plot(history[val_metric], label=f"Val {metric.capitalize()}")
-
-        plt.title(metric.capitalize())
-        plt.legend()
+    # Clean up empty subplots
+    for j in range(n_metrics, len(axes)):
+        fig.delaxes(axes[j])
 
     plt.tight_layout()
-    plt.savefig(save_path)
+    plt.savefig(save_path, dpi=150)
+    plt.close() # Close to free up memory
     logger.info(f"Training plot saved to {save_path}")
