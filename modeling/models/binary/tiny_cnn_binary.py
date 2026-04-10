@@ -46,12 +46,7 @@ PLOT_NAME = config["cnn_models"]["binary"]["tiny_cnn"]["plot_name.png"]
 EPOCH = config["cnn_models"]["binary"]["tiny_cnn"]["epoch"]
 BATCH_SIZE = config["cnn_models"]["binary"]["tiny_cnn"]["batch_size"]
 N_MELS = config["cnn_models"]["binary"]["tiny_cnn"]["n_mels"]
-CONV1_FILT= config["cnn_models"]["binary"]["tiny_cnn"]["conv1_filters"]
-CONV1_KRNL= config["cnn_models"]["binary"]["tiny_cnn"]["conv1_kernel"]
-CONV2_FILT= config["cnn_models"]["binary"]["tiny_cnn"]["conv2_filters"]
-CONV2_KRNL= config["cnn_models"]["binary"]["tiny_cnn"]["conv2_kernel"]
-DENSE_UNITS= config["cnn_models"]["binary"]["tiny_cnn"]["dense_units"]
-DROPOUT= config["cnn_models"]["binary"]["tiny_cnn"]["dropout"]
+LAYERS = config["cnn_models"]["binary"]["tiny_cnn"]["layers"]
 LEARNING_RATE= config["cnn_models"]["binary"]["tiny_cnn"]["learning_rate"]
 ACTIVATION= config["cnn_models"]["binary"]["tiny_cnn"]["activation"]
 LAST_ACTIVATION= config["cnn_models"]["binary"]["tiny_cnn"]["last_activation"]
@@ -70,18 +65,25 @@ def build_tiny_cnn_binary(input_shape: Tuple[int, int, int]) -> models.Sequentia
         layers.Input(shape=input_shape),
         
         # First conv block
-        layers.Conv2D(CONV1_FILT, tuple(CONV1_KRNL), activation=ACTIVATION, padding=PADDING),
+        layers.Conv2D(
+            LAYERS["conv1"]["filters"], 
+            tuple(LAYERS["conv1"]["kernel"]), 
+            activation=ACTIVATION, 
+            padding=PADDING),
         layers.BatchNormalization(),
-        layers.MaxPooling2D((2,2)),
+        layers.MaxPooling2D(tuple(LAYERS["conv1"]["max_pool"])),
         
         # Second conv block
-        layers.Conv2D(CONV2_FILT, tuple(CONV2_KRNL), activation=ACTIVATION),
+        layers.Conv2D(
+            LAYERS["conv2"]["filters"], 
+            tuple(LAYERS["conv2"]["kernel"]), 
+            activation=ACTIVATION),
         layers.BatchNormalization(),
         
         # Global pooling + dense
         layers.GlobalAveragePooling2D(),
-        layers.Dense(CONV2_FILT, activation=ACTIVATION),
-        layers.Dropout(DROPOUT),
+        layers.Dense(LAYERS["dense"]["units"], activation=ACTIVATION),
+        layers.Dropout(LAYERS["dense"]["dropout"]),
         layers.Dense(1, activation=LAST_ACTIVATION)  # Binary output
     ])
     model.compile(

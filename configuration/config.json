@@ -164,12 +164,11 @@
                 "epoch":50,
                 "batch_size":8,
                 "n_mels":64,
-                "conv1_filters": 16,
-                "conv1_kernel": [3,3],
-                "conv2_filters": 32,
-                "conv2_kernel": [3,3],
-                "dense_units": 32,
-                "dropout": 0.2,
+                "layers":{
+                    "conv1":{"filters": 16, "kernel": [3,3],"max_pool": [2,2]},
+                    "conv2":{"filters": 32, "kernel": [3,3]},
+                    "dense":{"units": 32,"dropout": 0.2}
+                },
                 "learning_rate": 0.001,
                 "activation": "relu",
                 "last_activation":"sigmoid",
