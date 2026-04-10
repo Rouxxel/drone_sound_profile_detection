@@ -54,12 +54,7 @@ PLOT_NAME = config["cnn_models"]["multiclass"]["tiny_cnn"]["plot_name.png"]
 EPOCH = config["cnn_models"]["multiclass"]["tiny_cnn"]["epoch"]
 BATCH_SIZE = config["cnn_models"]["multiclass"]["tiny_cnn"]["batch_size"]
 N_MELS = config["cnn_models"]["multiclass"]["tiny_cnn"]["n_mels"]
-CONV1_FILT= config["cnn_models"]["multiclass"]["tiny_cnn"]["conv1_filters"]
-CONV1_KRNL= config["cnn_models"]["multiclass"]["tiny_cnn"]["conv1_kernel"]
-CONV2_FILT= config["cnn_models"]["multiclass"]["tiny_cnn"]["conv2_filters"]
-CONV2_KRNL= config["cnn_models"]["multiclass"]["tiny_cnn"]["conv2_kernel"]
-DENSE_UNITS= config["cnn_models"]["multiclass"]["tiny_cnn"]["dense_units"]
-DROPOUT= config["cnn_models"]["multiclass"]["tiny_cnn"]["dropout"]
+LAYERS = config["cnn_models"]["multiclass"]["tiny_cnn"]["layers"]
 LEARNING_RATE= config["cnn_models"]["multiclass"]["tiny_cnn"]["learning_rate"]
 ACTIVATION= config["cnn_models"]["multiclass"]["tiny_cnn"]["activation"]
 LAST_ACTIVATION= config["cnn_models"]["multiclass"]["tiny_cnn"]["last_activation"]
@@ -83,22 +78,34 @@ def build_tiny_cnn(input_shape: Tuple[int, int, int], num_classes: int = 3) -> m
         A compiled tiny CNN model suitable for low-resource deployment.
     """
     logger.info("Building Tiny CNN model...")
+    
+    logger.info(f"Layer 1 Conv2D layer with {LAYERS['conv1']['filters']} filters and kernel size {LAYERS['conv1']['kernel']}, padding '{PADDING}', activation '{ACTIVATION}' and MaxPooling {LAYERS['conv1']['max_pool']}")
+    logger.info(f"Layer 2 Conv2D layer with {LAYERS['conv2']['filters']} filters and kernel size {LAYERS['conv2']['kernel']}, padding '{PADDING}' and activation '{ACTIVATION}'")
+    logger.info(f"Dense layer with {LAYERS['dense']['units']} units, dropout {LAYERS['dense']['dropout']}, activation '{ACTIVATION}' and last activation '{LAST_ACTIVATION}'")
     model = models.Sequential([
         layers.Input(shape=input_shape),
 
         # First conv block
-        layers.Conv2D(CONV1_FILT, tuple(CONV1_KRNL), activation=ACTIVATION, padding=PADDING),
+        layers.Conv2D(
+            LAYERS["conv1"]["filters"], 
+            tuple(LAYERS["conv1"]["kernel"]), 
+            activation=ACTIVATION, 
+            padding=PADDING),
         layers.BatchNormalization(),
-        layers.MaxPooling2D((2, 2)),
+        layers.MaxPooling2D(tuple(LAYERS["conv1"]["max_pool"])),
 
         # Second conv block
-        layers.Conv2D(CONV2_FILT, tuple(CONV2_KRNL), activation=ACTIVATION, padding=PADDING),
+        layers.Conv2D(
+            LAYERS["conv2"]["filters"],
+            tuple(LAYERS["conv2"]["kernel"]), 
+            activation=ACTIVATION, 
+            padding=PADDING),
         layers.BatchNormalization(),
 
         # Global pooling + dense
         layers.GlobalAveragePooling2D(),
-        layers.Dense(DENSE_UNITS, activation=ACTIVATION),
-        layers.Dropout(DROPOUT),
+        layers.Dense(LAYERS["dense"]["units"], activation=ACTIVATION),
+        layers.Dropout(LAYERS["dense"]["dropout"]),
         layers.Dense(num_classes, activation=LAST_ACTIVATION)
     ])
 

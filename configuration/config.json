@@ -126,6 +126,19 @@
                 "epoch":50,
                 "batch_size":8,
                 "n_mels":64,
+                "layers":{
+                    "conv1":{"filters": 16, "kernel": [3,3],"max_pool": [2,2]},
+                    "conv2":{"filters": 32, "kernel": [3,3]},
+                    "dense":{"units": 32,"dropout": 0.2}
+                },
+                "learning_rate": 0.001,
+                "activation": "relu",
+                "last_activation":"softmax",
+                "padding": "same",
+                "loss":"sparse_categorical_crossentropy",
+                "metrics":["accuracy","Precision","Recall","AUC"]
+            },
+            "robust_cnn":{
                 "conv1_filters": 16,
                 "conv1_kernel": [3,3],
                 "conv2_filters": 32,
