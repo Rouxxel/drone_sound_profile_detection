@@ -18,7 +18,7 @@ REPO_ROOT = SCRIPT_DIR.parent.parent.parent #root/
 sys.path.append(str(REPO_ROOT))
 #from custom_logger import get_logger #local testing only
 from modeling.utils.custom_logger import get_logger
-logger = get_logger("ml_models_logger", "ml_models_training.log")
+logger = get_logger("cnn_logger", "cnn_models_training.log")
 
 # -------------------------------------------------------------------------
 # Data Loading and preprocess
@@ -31,31 +31,58 @@ def compute_logmel(audio_path: Path, n_mels: int = 64) -> np.ndarray:
     logmel = (logmel - np.mean(logmel)) / (np.std(logmel) + 1e-6)
     return logmel.T  #CNN expects = (time_steps, mel_bins)
 
-def load_dataset(audio_dir: str, class_map: Dict,n_mels: int=64) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+def load_dataset(
+    audio_dir: str,
+    class_map: Dict[str, int],
+    n_mels: int = 64,
+    is_binary: bool = False
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+
     audio_path = Path(audio_dir)
     assert audio_path.exists(), f"Audio directory not found: {audio_dir}"
 
-    logger.info(f"Dataset successfully found and loaded from {audio_path}")
+    logger.info(f"Dataset successfully found and loaded from {audio_dir}")
 
-    data_by_class = {0: [], 1: [], 2: []}
+    # Prepare data container automatically
+    class_ids = sorted(set(class_map.values()))
+    data_by_class = {cid: [] for cid in class_ids}
 
-    # Load .wav files, NOT CSVs
+    logger.info(f"{'Binary' if is_binary else 'Multiclass'} classification active. Classes: {class_map}")
+
+    # Extract class ids if its binary
+    if is_binary:
+        drone_id     = class_map["DRONE"]
+        no_drone_id  = class_map["NO_DRONE"]
+    
+    # Load .wav files
     for file in audio_path.glob("*.wav"):
         name = file.stem.upper()
 
-        if name.startswith("DRONE"):
-            label = class_map["DRONE"]
-        elif name.startswith("HELICOPTER"):
-            label = class_map["HELICOPTER"]
-        elif name.startswith("BACKGROUND"):
-            label = class_map["BACKGROUND"]
-        else:
-            logger.warning(f"Skipping unknown file: {file.name}")
-            continue
+        # BINARY CLASSIFICATION
+        if is_binary:
+            if name.startswith("DRONE"):
+                label = drone_id
+            else:
+                # Everything else is NO-DRONE
+                label = no_drone_id
 
-        logmel = compute_logmel(audio_path=file,n_mels=n_mels)
+        # MULTICLASS CLASSIFICATION
+        else:
+            if name.startswith("BACKGROUND"):
+                label = class_map["BACKGROUND"]
+            elif name.startswith("HELICOPTER"):
+                label = class_map["HELICOPTER"]
+            elif name.startswith("DRONE"):
+                label = class_map["DRONE"]
+            else:
+                logger.warning(f"Skipping unknown file: {file.name}")
+                continue
+
+        # Compute features
+        logmel = compute_logmel(file, n_mels=n_mels)
         data_by_class[label].append(logmel)
-        logger.info(f"Loaded {file.name} -> class {label}, shape={logmel.shape}")
+
+        logger.info(f"Loaded: {file.name} → class={label}, shape={logmel.shape}")
 
     # Split per class to maintain balance
     X_train, y_train, X_val, y_val = [], [], [], []
@@ -74,11 +101,14 @@ def load_dataset(audio_dir: str, class_map: Dict,n_mels: int=64) -> Tuple[np.nda
         X_val.extend(val_split)
         y_val.extend([label] * len(val_split))
 
-        logger.info(f"Class {label}: {len(train_split)} train, {len(val_split)} validation")
+        logger.info(f"Class {label}: {len(train_split)} train / {len(val_split)} val")
 
-    X_train, y_train = np.array(X_train, dtype=object), np.array(y_train)
-    X_val, y_val = np.array(X_val, dtype=object), np.array(y_val)
-    return X_train, y_train, X_val, y_val
+    return (
+        np.array(X_train, dtype=object),
+        np.array(y_train),
+        np.array(X_val, dtype=object),
+        np.array(y_val),
+    )
 
 def preprocess_data(X: np.ndarray) -> np.ndarray:
     """
