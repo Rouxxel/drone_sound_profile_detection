@@ -12,16 +12,13 @@ This script implements traditional ML models:
 These models work directly on MFCC features.
 """
 
-import os
 import pickle
 import sys
 from pathlib import Path
-from typing import Tuple, Dict
-import numpy as np
-import pandas as pd
+from typing import Dict
 from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
 from sklearn.svm import SVC
-from sklearn.model_selection import train_test_split, cross_val_score
+from sklearn.model_selection import cross_val_score
 from sklearn.metrics import classification_report, confusion_matrix, accuracy_score
 from sklearn.preprocessing import StandardScaler
 import xgboost as xgb
@@ -36,7 +33,7 @@ REPO_ROOT = SCRIPT_DIR.parent.parent.parent #root/
 sys.path.append(str(REPO_ROOT))
 from modeling.utils.custom_logger import get_logger
 from configuration.config_loader import config
-from modeling.utils.ml_train_methods import extract_statistical_features, load_dataset, prepare_ml_features
+from modeling.utils.ml_train_methods import load_dataset, prepare_ml_features
 logger = get_logger("ml_models_logger", "ml_models_training.log")
 
 # General Configuration
