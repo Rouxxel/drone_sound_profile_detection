@@ -23,7 +23,7 @@
         }
     },
     "ml_models":{
-        "output_folder_str":"ml_trained_models",
+        "output_folder_str":"_ml_trained_models",
         "multiclass":{
             "general":{
                 "folder":"multiclass",
@@ -114,7 +114,7 @@
         }
     },
     "cnn_models":{
-        "output_folder_str":"cnn_trained_models",
+        "output_folder_str":"_cnn_trained_models",
         "multiclass":{
             "general":{
                 "folder":"multiclass",
