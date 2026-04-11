@@ -206,6 +206,11 @@ def main():
         pickle.dump(model, f)
     logger.info(f"Model saved to: {model_path}")
     
+    #Also save as native keras extension for better compatibility
+    keras_path = model_dir / "tiny_cnn_binary_model.keras"
+    model.save(keras_path)
+    logger.info(f"Model also saved as Keras to: {keras_path}")
+    
     # Also save as h5
     h5_path = model_dir / "robust_cnn_audio_model.h5"
     model.save(h5_path)
