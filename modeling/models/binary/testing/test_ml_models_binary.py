@@ -5,29 +5,31 @@ Binary ML Models Test Script
 Tests binary classification: DRONE vs NO_DRONE
 """
 
-import os
 import sys
 import pickle
-import logging
 from pathlib import Path
 from typing import Dict
-import numpy as np
-import pandas as pd
 from sklearn.metrics import classification_report, confusion_matrix, accuracy_score
-from sklearn.model_selection import train_test_split
 
-# Paths (script in modeling/models/binary/testing/; repo root = 4 levels up)
-SCRIPT_DIR = Path(__file__).resolve().parent
-REPO_ROOT = SCRIPT_DIR.parent.parent.parent.parent
-CSV_DIR = str(REPO_ROOT / "datasets" / "trad_ml_csv") #change as necessary for testing
-TRAINED_MODEL_ROOT = REPO_ROOT / "trained_models" / "binary" #change as necessary for testing
-CLASS_NAMES = {0: "NO_DRONE", 1: "DRONE"}
+# -------------------------------------------------------------------------
+# main Paths
+# -------------------------------------------------------------------------
+SCRIPT_DIR = Path(__file__).resolve().parent #testing/
+REPO_ROOT = SCRIPT_DIR.parent.parent.parent.parent #root/
+AUDIO_FOLDER = REPO_ROOT / "datasets" / "audios"
 
-# Logging (shared format; log file: logs/ml_models_binary_testing.log)
+#custom logger, config and utils
 sys.path.append(str(REPO_ROOT))
 from modeling.utils.custom_logger import get_logger
-from modeling.utils.ml_train_methods import load_dataset, extract_statistical_features, prepare_ml_features
-logger = get_logger("ml_binary_test_logger", "ml_models_binary_testing.log")
+from configuration.config_loader import config
+from modeling.utils.ml_train_methods import load_dataset, prepare_ml_features
+logger = get_logger("test_ml_models_logger", "testing_ml_models_binary.log")
+
+# General Configuration
+TRAINED_MODEL_ROOT = REPO_ROOT / config["ml_models"]["output_folder_str"]
+SPECIFIC_FOLDER = TRAINED_MODEL_ROOT / config["ml_models"]["binary"]["general"]["folder"]
+CSV_DIR = REPO_ROOT / "datasets" / config["audio_converters"]["trad_ml_models"]["output_folder_str"] #change as necessary for testing
+CLASS_NAMES = {0: "NO_DRONE", 1: "DRONE"} #change as necessary for testing
 
 # -------------------------------------------------------------------------
 # Model Testing
@@ -47,8 +49,10 @@ def test_model(model, model_name: str, X_val, y_val, class_names: Dict):
     logger.info(f"\n{cm}")
     
     logger.info("Classification Report:")
-    report = classification_report(y_val, y_pred, 
-                                   target_names=[class_names[i] for i in sorted(class_names.keys())])
+    report = classification_report(
+        y_val, y_pred,
+        target_names=[class_names[i] for i in sorted(class_names.keys())]
+        )
     logger.info(f"\n{report}")
     
     logger.info("Per-class Accuracy:")
@@ -68,7 +72,7 @@ def test_model(model, model_name: str, X_val, y_val, class_names: Dict):
 def main():
     logger.info("Starting Binary ML Models Testing...")
     
-    model_dir = TRAINED_MODEL_ROOT
+    model_dir = TRAINED_MODEL_ROOT / SPECIFIC_FOLDER
     if not model_dir.exists():
         logger.error(f"Model directory not found: {model_dir}")
         logger.error("Please train the models first by running ml_models_binary.py")
