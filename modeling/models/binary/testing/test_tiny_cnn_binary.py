@@ -6,77 +6,41 @@ Tests binary classification: DRONE vs NO_DRONE
 """
 
 import os
+import sys
 import pickle
-import logging
 from pathlib import Path
-import numpy as np
-import pandas as pd
 from sklearn.metrics import classification_report, confusion_matrix, accuracy_score
-from sklearn.model_selection import train_test_split
+from sklearn.metrics import confusion_matrix, classification_report, accuracy_score
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
-# Paths (script in modeling/models/binary/testing/; repo root = 4 levels up)
-SCRIPT_DIR = Path(__file__).resolve().parent
-REPO_ROOT = SCRIPT_DIR.parent.parent.parent.parent
-CSV_DIR = REPO_ROOT / "datasets" / "converted_csv"
-TRAINED_MODEL_ROOT = REPO_ROOT / "trained_models"
+# -------------------------------------------------------------------------
+# main Paths
+# -------------------------------------------------------------------------
+SCRIPT_DIR = Path(__file__).resolve().parent #testing/
+REPO_ROOT = SCRIPT_DIR.parent.parent.parent.parent #root/
+AUDIO_FOLDER = REPO_ROOT / "datasets" / "audios"
+
+#custom logger, config and utils
+sys.path.append(str(REPO_ROOT))
+from modeling.utils.custom_logger import get_logger
+from configuration.config_loader import config
+from modeling.utils.cnn_train_methods import load_dataset, preprocess_data
+logger = get_logger("test_cnn_models_logger", "testing_cnn_models_binary.log")
+
+# General Configuration
+TRAINED_MODEL_ROOT = REPO_ROOT / config["cnn_models"]["output_folder_str"]
+SPECIFIC_FOLDER = TRAINED_MODEL_ROOT / config["cnn_models"]["binary"]["general"]["folder"]
+CLASS_NAMES = {"NO_DRONE": 0, "DRONE": 1} #change as necessary for testing
 
 # Logging (shared format; log file: logs/tiny_cnn_binary_testing.log)
 from modeling.utils.custom_logger import get_logger
 logger = get_logger("tiny_cnn_binary_test_logger", "tiny_cnn_binary_testing.log")
 
-def load_dataset(csv_dir: str):
-    csv_path = Path(csv_dir)
-    assert csv_path.exists(), f"CSV directory not found: {csv_dir}"
-
-    logger.info(f"Loading dataset from {csv_path}")
-
-    class_names = {0: "NO_DRONE", 1: "DRONE"}
-    data_by_class = {0: [], 1: []}
-
-    for file in csv_path.glob("*.csv"):
-        name = file.stem.upper()
-        if name.startswith("DRONE"):
-            label = 1
-        elif name.startswith("HELICOPTER") or name.startswith("BACKGROUND"):
-            label = 0
-        else:
-            logger.warning(f"Skipping unknown file: {file.name}")
-            continue
-        mfcc = pd.read_csv(file).values.astype(np.float32)
-        data_by_class[label].append(mfcc)
-
-    X_train, y_train, X_val, y_val = [], [], [], []
-    for label, samples in data_by_class.items():
-        if len(samples) == 0:
-            logger.error(f"No samples found for class {label}.")
-            continue
-        train_split, val_split = train_test_split(samples, test_size=0.2, shuffle=True, random_state=42)
-        X_train.extend(train_split)
-        y_train.extend([label]*len(train_split))
-        X_val.extend(val_split)
-        y_val.extend([label]*len(val_split))
-        logger.info(f"Class {class_names[label]}: {len(train_split)} train, {len(val_split)} validation")
-
-    X_train, y_train = np.array(X_train, dtype=object), np.array(y_train)
-    X_val, y_val = np.array(X_val, dtype=object), np.array(y_val)
-    return X_train, y_train, X_val, y_val, class_names
-
-def preprocess_data(X: np.ndarray) -> np.ndarray:
-    max_frames = max(x.shape[0] for x in X)
-    feature_dim = X[0].shape[1]
-    X_out = np.zeros((len(X), max_frames, feature_dim), dtype=np.float32)
-    for i, mfcc in enumerate(X):
-        frames = mfcc.shape[0]
-        X_out[i, :frames, :] = mfcc
-    X_out = np.expand_dims(X_out, axis=-1)
-    return X_out
-
 def main():
     logger.info("Starting Binary Tiny CNN model testing...")
     
-    model_path = TRAINED_MODEL_ROOT / "binary" / "tiny_cnn" / "tiny_cnn_binary_model.pkl"
+    model_path = TRAINED_MODEL_ROOT / SPECIFIC_FOLDER / "tiny_cnn_binary_model.pkl"
     if not model_path.exists():
         logger.error(f"Model file not found: {model_path}")
         logger.error("Please train the model first by running tiny_cnn_binary.py")
@@ -87,8 +51,9 @@ def main():
         model = pickle.load(f)
     logger.info("Model loaded successfully")
     
-    csv_dir = str(CSV_DIR)
-    X_train_raw, y_train, X_val_raw, y_val, class_names = load_dataset(csv_dir)
+    class_names = {v: k for k, v in CLASS_NAMES.items()}
+    aud_dir = str(AUDIO_FOLDER)
+    X_train_raw, y_train, X_val_raw, y_val = load_dataset(audio_dir=aud_dir, class_map=CLASS_NAMES, n_mels=64, is_binary=True)
     
     X_val = preprocess_data(X_val_raw)
     
