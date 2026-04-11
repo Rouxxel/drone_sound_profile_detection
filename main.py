@@ -2,7 +2,6 @@
 """
 Full pipeline: download data → convert to CSV → EDA → train all models → test all models.
 Run from repo root: python main.py
-Logs every step to modeling_training.log in the repo root.
 """
 from __future__ import annotations
 
@@ -14,12 +13,14 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 
 # Import after repo root is established so path is correct
 from modeling.utils.custom_logger import log_handler
+from configuration.config_loader import config
 
 REPO_ROOT = Path(__file__).resolve().parent
 
 # Scripts to run (paths relative to repo root)
-DOWNLOAD_SCRIPT = REPO_ROOT / "datasets" / "data_kaggle_download.py"
-CONVERTER_SCRIPT = REPO_ROOT / "datasets" / "audio_to_csv_converter.py"
+DATASET_FOLDER = REPO_ROOT / "datasets"
+DOWNLOAD_SCRIPT = REPO_ROOT / DATASET_FOLDER / "data_kaggle_download.py"
+CONVERTER_SCRIPT = REPO_ROOT / DATASET_FOLDER / "aud_csv_converter_trad_ml.py"
 
 EDA_SCRIPTS = [
     REPO_ROOT / "modeling" / "EDA" / "plot_converted_csv.py",
@@ -42,23 +43,25 @@ TESTING_SCRIPTS = [
     REPO_ROOT / "modeling" / "models" / "binary" / "testing" / "test_ml_models_binary.py",
 ]
 
-# Paths used to decide if a step is already done (skip)
+# Paths used to decide if a step is already done
 AUDIOS_DIR = REPO_ROOT / "datasets" / "audios"
-CONVERTED_CSV_DIR = REPO_ROOT / "datasets" / "converted_csv"
+CONVERTED_CSV_DIR = REPO_ROOT / "datasets" / "trad_ml_csv"
+
 EDA_PLOTS_DIR = REPO_ROOT / "modeling" / "EDA" / "plots"
 EDA_REPORT_DIR = REPO_ROOT / "modeling" / "EDA" / "eda_report"
-LOGS_DIR = REPO_ROOT / "logs"
-TRAINED_TINY_CNN = REPO_ROOT / "trained_models" / "tiny_cnn"
-TRAINED_ROBUST_CNN = REPO_ROOT / "trained_models" / "robust_cnn"
-TRAINED_ML_MODELS = REPO_ROOT / "trained_models" / "ml_models"
-TRAINED_BINARY_TINY = REPO_ROOT / "trained_models" / "binary" / "tiny_cnn"
-TRAINED_BINARY_ML = REPO_ROOT / "trained_models" / "binary" / "ml_models"
+
+TRAINED_TINY_CNN_MULTICLASS = REPO_ROOT / "_cnn_trained_models" / "multiclass"  / "tiny_cnn_audio_model"
+TRAINED_ROBUST_CNN = REPO_ROOT / "_cnn_trained_models" / "multiclass"  / "robust_cnn_audio_model"
+TRAINED_TINY_CNN_BINARY = REPO_ROOT / "_cnn_trained_models" / "binary" / "tiny_cnn_binary_model"
+TRAINED_ML_MODELS_MULTICLASS = REPO_ROOT / "_ml_trained_models" / "multiclass"
+TRAINED_ML_MODELS_BINARY = REPO_ROOT / "_ml_trained_models" / "binary"
+
+LOGS_DIR = REPO_ROOT / "_logs"
 TEST_LOG_FILES = [
-    "tiny_cnn_testing.log",
-    "ml_models_testing.log",
-    "robust_cnn_testing.log",
-    "tiny_cnn_binary_testing.log",
-    "ml_models_binary_testing.log",
+    "testing_ml_models.log",
+    "testing_cnn_models.log",
+    "ml_models_training.log",
+    "cnn_models_training.log",
 ]
 
 
@@ -94,11 +97,11 @@ def is_training_done() -> bool:
             return False
         return any(f.suffix.lower() in (".pkl", ".h5", ".keras") for f in d.iterdir() if f.is_file())
     return (
-        has_model(TRAINED_TINY_CNN)
-        and has_model(TRAINED_ROBUST_CNN)
-        and has_model(TRAINED_ML_MODELS)
-        and has_model(TRAINED_BINARY_TINY)
-        and has_model(TRAINED_BINARY_ML)
+        has_model(TRAINED_ROBUST_CNN)
+        and has_model(TRAINED_TINY_CNN_BINARY)
+        and has_model(TRAINED_TINY_CNN_MULTICLASS)
+        and has_model(TRAINED_ML_MODELS_BINARY)
+        and has_model(TRAINED_ML_MODELS_MULTICLASS)
     )
 
 
