@@ -7,30 +7,31 @@ This script tests trained ML models (Random Forest, SVM, XGBoost, Gradient Boost
 on the validation set.
 """
 
-import os
 import sys
 import pickle
-import logging
 from pathlib import Path
 from typing import Dict
-import numpy as np
-import pandas as pd
 from sklearn.metrics import classification_report, confusion_matrix, accuracy_score
-from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import StandardScaler
 
-# Paths (script in modeling/models/multiclass/testing/; repo root = 4 levels up)
-SCRIPT_DIR = Path(__file__).resolve().parent
-REPO_ROOT = SCRIPT_DIR.parent.parent.parent.parent
-CSV_DIR = REPO_ROOT / "datasets" / "trad_ml_csv" #adjust for testing
-TRAINED_MODEL_ROOT = REPO_ROOT / "trained_models" / "multiclass" #adjust for testing
-CLASS_NAMES = {0: "BACKGROUND", 1: "HELICOPTER", 2: "DRONE"}
+# -------------------------------------------------------------------------
+# main Paths
+# -------------------------------------------------------------------------
+SCRIPT_DIR = Path(__file__).resolve().parent #testing/
+REPO_ROOT = SCRIPT_DIR.parent.parent.parent.parent #root/
+AUDIO_FOLDER = REPO_ROOT / "datasets" / "audios"
 
-# Logging (shared format; log file: logs/ml_models_binary_testing.log)
+#custom logger, config and utils
 sys.path.append(str(REPO_ROOT))
 from modeling.utils.custom_logger import get_logger
-from modeling.utils.ml_train_methods import load_dataset, extract_statistical_features, prepare_ml_features
-logger = get_logger("ml_test_logger", "ml_models_testing.log")
+from configuration.config_loader import config
+from modeling.utils.ml_train_methods import load_dataset, prepare_ml_features
+logger = get_logger("test_ml_models_logger", "testing_ml_models_multiclass.log")
+
+# General Configuration
+TRAINED_MODEL_ROOT = REPO_ROOT / config["ml_models"]["output_folder_str"]
+SPECIFIC_FOLDER = TRAINED_MODEL_ROOT / config["ml_models"]["multiclass"]["general"]["folder"]
+CSV_DIR = REPO_ROOT / "datasets" / config["audio_converters"]["trad_ml_models"]["output_folder_str"] #change as necessary for testing
+CLASS_NAMES = {0: "BACKGROUND", 1:"HELICOPTER", 2: "DRONE"} #change as necessary for testing
 
 # -------------------------------------------------------------------------
 # Model Testing
@@ -80,7 +81,7 @@ def main():
     logger.info("Starting ML Models Testing...")
     
     # Check for trained models
-    model_dir = TRAINED_MODEL_ROOT
+    model_dir = TRAINED_MODEL_ROOT / SPECIFIC_FOLDER
     if not model_dir.exists():
         logger.error(f"Model directory not found: {model_dir}")
         logger.error("Please train the models first by running ml_models.py")
