@@ -4,80 +4,45 @@ Robust CNN Model Test Script
 """
 
 import os
+import sys
 import pickle
-import logging
-from pathlib import Path
 import numpy as np
-import pandas as pd
+from pathlib import Path
 from sklearn.metrics import classification_report, confusion_matrix, accuracy_score
-from sklearn.model_selection import train_test_split
+from sklearn.metrics import confusion_matrix, classification_report, accuracy_score
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
-# Paths (script in modeling/models/multiclass/testing/; repo root = 4 levels up)
-SCRIPT_DIR = Path(__file__).resolve().parent
-REPO_ROOT = SCRIPT_DIR.parent.parent.parent.parent
-CSV_DIR = REPO_ROOT / "datasets" / "converted_csv"
-TRAINED_MODEL_ROOT = REPO_ROOT / "trained_models"
+# -------------------------------------------------------------------------
+# main Paths
+# -------------------------------------------------------------------------
+SCRIPT_DIR = Path(__file__).resolve().parent #testing/
+REPO_ROOT = SCRIPT_DIR.parent.parent.parent.parent #root/
+AUDIO_FOLDER = REPO_ROOT / "datasets" / "audios"
 
-# Logging (shared format; log file: logs/robust_cnn_testing.log)
+#custom logger, config and utils
+sys.path.append(str(REPO_ROOT))
 from modeling.utils.custom_logger import get_logger
-logger = get_logger("robust_cnn_test_logger", "robust_cnn_testing.log")
+from configuration.config_loader import config
+from modeling.utils.cnn_train_methods import load_dataset, preprocess_data
+logger = get_logger("test_cnn_models_logger", "testing_cnn_models_multiclass.log")
 
-def load_dataset(csv_dir: str):
-    csv_path = Path(csv_dir)
-    assert csv_path.exists(), f"CSV directory not found: {csv_dir}"
+# General Configuration
+TRAINED_MODEL_ROOT = REPO_ROOT / config["cnn_models"]["output_folder_str"]
+SPECIFIC_FOLDER = TRAINED_MODEL_ROOT / config["cnn_models"]["multiclass"]["general"]["folder"]
+CLASS_NAMES = {"BACKGROUND": 0, "HELICOPTER": 1, "DRONE": 2} #change as necessary for testing
 
-    logger.info(f"Loading dataset from {csv_path}")
+# Logging (shared format; log file: logs/tiny_cnn_testing.log)
+from modeling.utils.custom_logger import get_logger
+logger = get_logger("tiny_cnn_test_logger", "tiny_cnn_testing.log")
 
-    class_map = {"BACKGROUND": 0, "HELICOPTER": 1, "DRONE": 2}
-    class_names = {0: "BACKGROUND", 1: "HELICOPTER", 2: "DRONE"}
-    data_by_class = {0: [], 1: [], 2: []}
-
-    for file in csv_path.glob("*.csv"):
-        name = file.stem.upper()
-        if name.startswith("DRONE"):
-            label = class_map["DRONE"]
-        elif name.startswith("HELICOPTER"):
-            label = class_map["HELICOPTER"]
-        elif name.startswith("BACKGROUND"):
-            label = class_map["BACKGROUND"]
-        else:
-            logger.warning(f"Skipping unknown file: {file.name}")
-            continue
-        mfcc = pd.read_csv(file).values.astype(np.float32)
-        data_by_class[label].append(mfcc)
-
-    X_train, y_train, X_val, y_val = [], [], [], []
-    for label, samples in data_by_class.items():
-        if len(samples) == 0:
-            logger.error(f"No samples found for class {label}.")
-            continue
-        train_split, val_split = train_test_split(samples, test_size=0.2, shuffle=True, random_state=42)
-        X_train.extend(train_split)
-        y_train.extend([label]*len(train_split))
-        X_val.extend(val_split)
-        y_val.extend([label]*len(val_split))
-        logger.info(f"Class {class_names[label]}: {len(train_split)} train, {len(val_split)} validation")
-
-    X_train, y_train = np.array(X_train, dtype=object), np.array(y_train)
-    X_val, y_val = np.array(X_val, dtype=object), np.array(y_val)
-    return X_train, y_train, X_val, y_val, class_names
-
-def preprocess_data(X: np.ndarray) -> np.ndarray:
-    max_frames = max(x.shape[0] for x in X)
-    feature_dim = X[0].shape[1]
-    X_out = np.zeros((len(X), max_frames, feature_dim), dtype=np.float32)
-    for i, mfcc in enumerate(X):
-        frames = mfcc.shape[0]
-        X_out[i, :frames, :] = mfcc
-    X_out = np.expand_dims(X_out, axis=-1)
-    return X_out
-
+# -------------------------------------------------------------------------
+# Main Testing Pipeline
+# -------------------------------------------------------------------------
 def main():
     logger.info("Starting Robust CNN model testing...")
     
-    model_path = TRAINED_MODEL_ROOT / "robust_cnn" / "robust_cnn_audio_model.pkl"
+    model_path = TRAINED_MODEL_ROOT / SPECIFIC_FOLDER / "robust_cnn_audio_model.pkl"
     if not model_path.exists():
         logger.error(f"Model file not found: {model_path}")
         logger.error("Please train the model first by running robust_cnn_model.py")
@@ -88,8 +53,9 @@ def main():
         model = pickle.load(f)
     logger.info("Model loaded successfully")
     
-    csv_dir = str(CSV_DIR)
-    X_train_raw, y_train, X_val_raw, y_val, class_names = load_dataset(csv_dir)
+    aud_dir = str(AUDIO_FOLDER)
+    class_names = {v: k for k, v in CLASS_NAMES.items()}
+    X_train_raw, y_train, X_val_raw, y_val = load_dataset(audio_dir=aud_dir,class_map=CLASS_NAMES, n_mels=64, is_binary=False)
     
     X_val = preprocess_data(X_val_raw)
     
