@@ -25,7 +25,7 @@ sys.path.append(str(REPO_ROOT))
 from modeling.utils.custom_logger import get_logger
 from configuration.config_loader import config
 from modeling.utils.ml_train_methods import load_dataset, prepare_ml_features
-logger = get_logger("test_ml_models_logger", "testing_ml_models_multiclass.log")
+logger = get_logger("test_ml_models_logger", "testing_ml_models.log")
 
 # General Configuration
 TRAINED_MODEL_ROOT = REPO_ROOT / config["ml_models"]["output_folder_str"]

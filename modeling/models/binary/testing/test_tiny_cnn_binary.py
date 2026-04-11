@@ -26,16 +26,12 @@ sys.path.append(str(REPO_ROOT))
 from modeling.utils.custom_logger import get_logger
 from configuration.config_loader import config
 from modeling.utils.cnn_train_methods import load_dataset, preprocess_data
-logger = get_logger("test_cnn_models_logger", "testing_cnn_models_binary.log")
+logger = get_logger("test_cnn_logger", "testing_cnn_models.log")
 
 # General Configuration
 TRAINED_MODEL_ROOT = REPO_ROOT / config["cnn_models"]["output_folder_str"]
 SPECIFIC_FOLDER = TRAINED_MODEL_ROOT / config["cnn_models"]["binary"]["general"]["folder"]
 CLASS_NAMES = {"NO_DRONE": 0, "DRONE": 1} #change as necessary for testing
-
-# Logging (shared format; log file: logs/tiny_cnn_binary_testing.log)
-from modeling.utils.custom_logger import get_logger
-logger = get_logger("tiny_cnn_binary_test_logger", "tiny_cnn_binary_testing.log")
 
 def main():
     logger.info("Starting Binary Tiny CNN model testing...")
