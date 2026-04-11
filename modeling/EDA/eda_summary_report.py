@@ -20,10 +20,7 @@ from sklearn.decomposition import PCA
 # --------------- PATHS --------------- #
 SCRIPT_DIR = Path(__file__).resolve().parent #EDA/
 REPO_ROOT = SCRIPT_DIR.parent.parent #root/
-
-CSV_FOLDER = REPO_ROOT / "datasets" / "trad_ml_csv" #Modify input folder as necessary
 AUDIOS_FOLDER = REPO_ROOT / "datasets" / "audios"
-OUTPUT_DIR = SCRIPT_DIR / "eda_report_trad_ml" #Modify output folder necessary
 
 # --------------- CONFIG --------------- #
 sys.path.append(str(REPO_ROOT))
@@ -34,6 +31,9 @@ N_MFCC = config["eda"]["summary_report"]["n_mfcc"]
 DURATION_SHORT_S = config["eda"]["summary_report"]["duration_short.s"]
 DURATION_LONG_S = config["eda"]["summary_report"]["duration_long.s"]
 MEAN_RMS_SILENCE_THRESHOLD = config["eda"]["summary_report"]["mean_rms_silence_threshold"]
+SPECIFIC_DIR = config["eda"]["summary_report"]["output_folder_str"]
+CSV_FOLDER = REPO_ROOT / "datasets" / config["audio_converters"]["trad_ml_models"]["output_folder_str"]
+OUTPUT_DIR = SCRIPT_DIR / SPECIFIC_DIR
 
 
 def extract_statistical_features(mfcc: np.ndarray) -> np.ndarray:

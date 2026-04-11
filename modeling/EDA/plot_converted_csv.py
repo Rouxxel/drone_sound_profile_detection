@@ -15,8 +15,6 @@ import librosa
 # Script lives in modeling/EDA/; datasets/ is at repo root (two levels up)
 SCRIPT_DIR = Path(__file__).resolve().parent #modelling/
 REPO_ROOT = SCRIPT_DIR.parent.parent #root/
-CSV_FOLDER = REPO_ROOT / "datasets" / "trad_ml_csv" #Modify input folder as necessary
-PLOTS_DIR = SCRIPT_DIR / "plots_trad_ml" #Modify output folder necessary
 AUDIOS_FOLDER = REPO_ROOT / "datasets" / "audios" 
 
 # --------------- CONFIG --------------- #
@@ -24,6 +22,9 @@ sys.path.append(str(REPO_ROOT))
 from configuration.config_loader import config
 SAMP_RATE = config["eda"]["plot_converter"]["samp_rate"]
 HOP_LENGTH = config["eda"]["plot_converter"]["hop_length"]
+SPECIFIC_DIR = config["eda"]["plot_converter"]["output_folder_str"]
+CSV_FOLDER = REPO_ROOT / "datasets" / config["audio_converters"]["trad_ml_models"]["output_folder_str"]
+PLOTS_DIR = SCRIPT_DIR / SPECIFIC_DIR
 
 # Set to None to plot ALL CSVs; set to a filename (e.g. "DRONE_001.csv") to plot only that file
 plot_one = None

@@ -1,4 +1,9 @@
 {
+    "kaggle":{
+        "dataset_name":"tacticularcancer/drone-detection-dataset",
+        "audios_dir":"audios",
+        "top_dir_name":"DroneDetectionThesis"
+    },
     "audio_converters":{
         "input_file_extensions":[".wav", ".mp3", ".flac", ".ogg", ".m4a"],
         "output_file_extensions":".csv",
@@ -9,7 +14,9 @@
         }
     },
     "eda":{
+        "audio_dir":"datasets/audios",
         "summary_report":{
+            "output_folder_str":"eda_report",
             "samp_rate":44100,
             "hop_length": 512,
             "n_mfcc":14,
@@ -18,6 +25,7 @@
             "mean_rms_silence_threshold": 0.001
         },
         "plot_converter":{
+            "output_folder_str":"plots",
             "samp_rate":44100,
             "hop_length":512
         }

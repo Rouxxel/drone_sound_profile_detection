@@ -6,17 +6,21 @@
 # deletes the downloaded DroneDetectionThesis folder.
 
 import os
+import sys
 from pathlib import Path
 import shutil
 import kagglehub
 from kagglehub.exceptions import KaggleApiHTTPError
 
-DATASET = "tacticularcancer/drone-detection-dataset"
+# --------------- CONFIG --------------- #
+SCRIPT_DIR = Path(__file__).resolve().parent #datasets/
+REPO_ROOT = SCRIPT_DIR.parent #root/
+sys.path.append(str(REPO_ROOT))
+from configuration.config_loader import config
 
-# Same directory as this script (datasets/)
-SCRIPT_DIR = Path(__file__).resolve().parent
-AUDIOS_DIR = SCRIPT_DIR / "audios"
-DRONE_DETECTION_TOP = SCRIPT_DIR / "DroneDetectionThesis"
+DATASET = config["kaggle"]["dataset_name"]
+AUDIOS_DIR = SCRIPT_DIR / config["kaggle"]["audios_dir"]
+DRONE_DETECTION_TOP = SCRIPT_DIR / config["kaggle"]["top_dir_name"]
 
 print(f"Attempting to download dataset '{DATASET}' using KaggleHub...")
 
