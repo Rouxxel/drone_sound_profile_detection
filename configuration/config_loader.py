@@ -8,7 +8,9 @@ import json
 import sys
 from pathlib import Path
 
-"""METHOD-----------------------------------------------------------"""
+#------------------------------------------------------
+# Methods
+#------------------------------------------------------
 def read_data_from_json(file_path: str, exit_on_error: bool = True) -> dict:
     """
     Reads data from a JSON configuration file.
@@ -37,7 +39,9 @@ def read_data_from_json(file_path: str, exit_on_error: bool = True) -> dict:
         else:
             return None
 
-"""VARIABLES-----------------------------------------------------------"""
+#------------------------------------------------------
+# Variables
+#------------------------------------------------------
 #Path to your config JSON file
 SCRIPT_DIR = Path(__file__).resolve().parent #configuration/
 CONFIG_FILE_PATH = SCRIPT_DIR / "config.json"

@@ -1,20 +1,25 @@
 """
 Custom logger for the drone sound profile detection pipeline.
 - main.py uses log_handler (writes to modeling_training.log in repo root).
-- Other scripts use get_logger(name, log_filename) to write to logs/<log_filename>
-  with the same format. Run scripts from repo root so "modeling" is importable.
+- Other scripts use get_logger(name, log_filename) to write to logs/<log_filename> 
+with the same format. Run scripts from repo root so "modeling" is importable.
 """
 
 import logging
 import sys
 from pathlib import Path
 
+#------------------------------------------------------
+# Config
+#------------------------------------------------------
 # Repo root (modeling/utils/ -> modeling/ -> repo root)
 _SCRIPT_DIR = Path(__file__).resolve().parent
 REPO_ROOT = _SCRIPT_DIR.parent.parent
 LOGS_DIR = REPO_ROOT / "_logs"
 
-
+#------------------------------------------------------
+# Class and methods
+#------------------------------------------------------
 class _PipelineFormatter(logging.Formatter):
     """Shared formatter: timestamp with milliseconds | level | message."""
     def formatTime(self, record, datefmt=None):
@@ -26,11 +31,8 @@ class _PipelineFormatter(logging.Formatter):
         )
         return t
 
-
 # One formatter for all loggers
 _LOG_FORMAT = _PipelineFormatter("%(asctime)s | %(levelname)s | %(message)s")
-
-
 def get_logger(logger_name: str, log_filename: str | None = None) -> logging.Logger:
     """
     Return a logger that writes to a file (and console) with the shared format.
@@ -71,7 +73,6 @@ def get_logger(logger_name: str, log_filename: str | None = None) -> logging.Log
     logger.info(break_line)
 
     return logger
-
 
 # Default logger for main.py: writes to modeling_training.log in repo root
 log_handler = get_logger("modeling_training", log_filename=None)

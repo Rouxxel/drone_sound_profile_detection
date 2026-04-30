@@ -10,16 +10,23 @@ import numpy as np
 import pandas as pd
 from sklearn.model_selection import train_test_split
 
+#------------------------------------------------------
+# Path
+#------------------------------------------------------
 SCRIPT_DIR = Path(__file__).resolve().parent #utils/
 REPO_ROOT = SCRIPT_DIR.parent.parent.parent #root/
 
-#custom logger
+#------------------------------------------------------
+# Custom logger
+#------------------------------------------------------
 sys.path.append(str(REPO_ROOT))
 #from custom_logger import get_logger #local testing only
 from modeling.utils.custom_logger import get_logger
 logger = get_logger("ml_models_logger", "ml_models_training.log")
 
-# -------------------------------------------------------------------------
+#------------------------------------------------------
+# Methods
+#------------------------------------------------------
 def load_dataset(
     csv_dir:str, 
     test_split:float = 0.2,
@@ -100,7 +107,6 @@ def load_dataset(
     
     return X_train, y_train, X_val, y_val
 
-# -------------------------------------------------------------------------
 def extract_statistical_features(mfcc: np.ndarray) -> np.ndarray:
     """
     Extract a fixed-length statistical feature vector from an MFCC matrix. Take 
@@ -156,7 +162,6 @@ def extract_statistical_features(mfcc: np.ndarray) -> np.ndarray:
     
     return vec
 
-# -------------------------------------------------------------------------
 def prepare_ml_features(X: np.ndarray) -> np.ndarray:
     """
     Convert a list/array of MFCC matrices into fixed-length ML feature vectors.
@@ -176,7 +181,6 @@ def prepare_ml_features(X: np.ndarray) -> np.ndarray:
         feat = extract_statistical_features(mfcc)
         features.append(feat)
     return np.array(features)
-
 
 # -------------------------------------------------------------------------
 # Internal verification tests (executed only when run directly)

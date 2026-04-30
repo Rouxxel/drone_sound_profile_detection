@@ -15,6 +15,10 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from modeling.utils.custom_logger import log_handler
 from configuration.config_loader import config
 
+
+#------------------------------------------------------
+# Config
+#------------------------------------------------------
 REPO_ROOT = Path(__file__).resolve().parent
 
 # Scripts to run (paths relative to repo root)
@@ -43,7 +47,9 @@ TESTING_SCRIPTS = [
     REPO_ROOT / "modeling" / "models" / "binary" / "testing" / "test_ml_models_binary.py",
 ]
 
+#------------------------------------------------------
 # Paths used to decide if a step is already done
+#------------------------------------------------------
 AUDIOS_DIR = REPO_ROOT / "datasets" / "audios"
 CONVERTED_CSV_DIR = REPO_ROOT / "datasets" / "trad_ml_csv"
 
@@ -64,23 +70,22 @@ TEST_LOG_FILES = [
     "cnn_models_training.log",
 ]
 
-
+#------------------------------------------------------
+# Methods
+#------------------------------------------------------
 def _has_files(dir_path: Path, suffix: str) -> bool:
     """True if dir exists and contains at least one file with the given suffix (e.g. .wav)."""
     if not dir_path.is_dir():
         return False
     return any(f.suffix.lower() == suffix.lower() for f in dir_path.iterdir() if f.is_file())
 
-
 def is_download_done() -> bool:
     """True if datasets/audios/ exists and has at least one .wav file."""
     return _has_files(AUDIOS_DIR, ".wav")
 
-
 def is_conversion_done() -> bool:
     """True if datasets/converted_csv/ exists and has at least one .csv file."""
     return _has_files(CONVERTED_CSV_DIR, ".csv")
-
 
 def is_eda_done() -> bool:
     """True if EDA plots and report outputs exist."""
@@ -88,7 +93,6 @@ def is_eda_done() -> bool:
         return False
     report_md = EDA_REPORT_DIR / "07_eda_report.md"
     return report_md.is_file()
-
 
 def is_training_done() -> bool:
     """True if all five model outputs exist (tiny_cnn, robust_cnn, ml_models, binary/tiny_cnn, binary/ml_models)."""
@@ -104,13 +108,11 @@ def is_training_done() -> bool:
         and has_model(TRAINED_ML_MODELS_MULTICLASS)
     )
 
-
 def is_testing_done() -> bool:
     """True if all five test log files exist in logs/."""
     if not LOGS_DIR.is_dir():
         return False
     return all((LOGS_DIR / name).is_file() for name in TEST_LOG_FILES)
-
 
 def run_script(script_path: Path, label: str = None) -> tuple[str, int]:
     """Run a Python script from repo root; return (label, returncode)."""
@@ -132,7 +134,6 @@ def run_script(script_path: Path, label: str = None) -> tuple[str, int]:
     )
     return (name, result.returncode)
 
-
 def run_sequential(script_path: Path, label: str = None) -> bool:
     """Run one script; return True if success."""
     name, code = run_script(script_path, label)
@@ -143,7 +144,6 @@ def run_sequential(script_path: Path, label: str = None) -> bool:
     log_handler.info(f"Script completed successfully: {name}")
     print(f"[OK] {name}")
     return True
-
 
 def run_concurrent(script_paths: list[Path], step_name: str) -> bool:
     """Run all scripts concurrently; return True only if all succeed."""
@@ -172,7 +172,6 @@ def run_concurrent(script_paths: list[Path], step_name: str) -> bool:
     log_handler.info(f"Step '{step_name}' completed: all {len(script_paths)} script(s) succeeded")
     print(f"[STEP OK] {step_name}: all {len(script_paths)} script(s) completed.")
     return True
-
 
 def main():
     log_handler.info("Pipeline started: download → convert → EDA → train → test")

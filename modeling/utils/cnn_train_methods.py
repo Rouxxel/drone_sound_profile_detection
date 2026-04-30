@@ -12,10 +12,15 @@ from keras import callbacks
 from typing import Tuple, Dict
 from sklearn.model_selection import train_test_split
 
+#------------------------------------------------------
+# Path
+#------------------------------------------------------
 SCRIPT_DIR = Path(__file__).resolve().parent #utils/
 REPO_ROOT = SCRIPT_DIR.parent.parent.parent #root/
 
-#custom logger
+#------------------------------------------------------
+# Custom logger
+#------------------------------------------------------
 sys.path.append(str(REPO_ROOT))
 #from custom_logger import get_logger #local testing only
 from modeling.utils.custom_logger import get_logger

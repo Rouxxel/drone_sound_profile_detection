@@ -17,12 +17,16 @@ import librosa
 from sklearn.preprocessing import StandardScaler
 from sklearn.decomposition import PCA
 
-# --------------- PATHS --------------- #
+#------------------------------------------------------
+# Paths
+#------------------------------------------------------
 SCRIPT_DIR = Path(__file__).resolve().parent #EDA/
 REPO_ROOT = SCRIPT_DIR.parent.parent #root/
 AUDIOS_FOLDER = REPO_ROOT / "datasets" / "audios"
 
-# --------------- CONFIG --------------- #
+#------------------------------------------------------
+# Config
+#------------------------------------------------------
 sys.path.append(str(REPO_ROOT))
 from configuration.config_loader import config
 SAMP_RATE = config["eda"]["summary_report"]["samp_rate"]
@@ -35,7 +39,9 @@ SPECIFIC_DIR = config["eda"]["summary_report"]["output_folder_str"]
 CSV_FOLDER = REPO_ROOT / "datasets" / config["audio_converters"]["trad_ml_models"]["output_folder_str"]
 OUTPUT_DIR = SCRIPT_DIR / SPECIFIC_DIR
 
-
+#------------------------------------------------------
+# Methods
+#------------------------------------------------------
 def extract_statistical_features(mfcc: np.ndarray) -> np.ndarray:
     """Same as in ml_models: mean, std, min, max, median, p25, p75, delta mean/std."""
     mfcc = np.asarray(mfcc, dtype=np.float32)
@@ -55,7 +61,6 @@ def extract_statistical_features(mfcc: np.ndarray) -> np.ndarray:
         features.extend(np.zeros(mfcc.shape[1]))
         features.extend(np.zeros(mfcc.shape[1]))
     return np.array(features, dtype=np.float32)
-
 
 def load_all_csv_summaries():
     """Load each CSV, compute per-file stats and optional RMS; return list of dicts."""
@@ -107,7 +112,6 @@ def load_all_csv_summaries():
 
     return rows
 
-
 def plot_class_distribution(df: pd.DataFrame, out_dir: Path):
     """Bar chart: count per class."""
     fig, ax = plt.subplots(figsize=(8, 4))
@@ -121,7 +125,6 @@ def plot_class_distribution(df: pd.DataFrame, out_dir: Path):
     plt.savefig(out_dir / "01_class_distribution.png", dpi=150)
     plt.close()
     print("  Saved 01_class_distribution.png")
-
 
 def plot_duration_distribution(df: pd.DataFrame, out_dir: Path):
     """Boxplot of duration per class."""
@@ -137,7 +140,6 @@ def plot_duration_distribution(df: pd.DataFrame, out_dir: Path):
     plt.savefig(out_dir / "02_duration_by_class.png", dpi=150)
     plt.close()
     print("  Saved 02_duration_by_class.png")
-
 
 def plot_mfcc_mean_by_class(rows: list, out_dir: Path):
     """Mean MFCC profile per class (line plot) + per-coefficient boxplots by class."""
@@ -215,7 +217,6 @@ def save_summary_stats_table(rows: list, out_dir: Path):
     summary_df.to_csv(out_dir / "05_summary_stats_by_class.csv", index=False)
     print("  Saved 05_summary_stats_by_class.csv")
 
-
 def plot_pca_separability(rows: list, out_dir: Path):
     """PCA on full feature vectors; scatter colored by class."""
     X = np.array([r["feat_vec"] for r in rows])
@@ -242,7 +243,6 @@ def plot_pca_separability(rows: list, out_dir: Path):
     plt.close()
     print("  Saved 06_pca_by_class.png")
 
-
 def quality_checks(rows: list) -> dict:
     """Return short, long, and near-silence file lists."""
     short = [r["file"] for r in rows if r["duration_sec"] < DURATION_SHORT_S]
@@ -253,7 +253,6 @@ def quality_checks(rows: list) -> dict:
         if mr is not None and not np.isnan(mr) and mr < MEAN_RMS_SILENCE_THRESHOLD:
             silent.append(r["file"])
     return {"short": short, "long": long_, "silent": silent}
-
 
 def write_report(rows: list, out_dir: Path, quality: dict):
     """Write markdown report with counts, duration stats, quality flags, figure refs."""
@@ -305,7 +304,6 @@ def write_report(rows: list, out_dir: Path, quality: dict):
     report_path = out_dir / "07_eda_report.md"
     report_path.write_text("\n".join(lines), encoding="utf-8")
     print("  Saved 07_eda_report.md")
-
 
 def main():
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)

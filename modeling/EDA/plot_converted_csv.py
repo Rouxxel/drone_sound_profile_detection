@@ -11,13 +11,17 @@ import numpy as np
 import matplotlib.pyplot as plt
 import librosa
 
-# ---------------- SETTINGS ---------------- #
+#------------------------------------------------------
+# Settings
+#------------------------------------------------------
 # Script lives in modeling/EDA/; datasets/ is at repo root (two levels up)
 SCRIPT_DIR = Path(__file__).resolve().parent #modelling/
 REPO_ROOT = SCRIPT_DIR.parent.parent #root/
 AUDIOS_FOLDER = REPO_ROOT / "datasets" / "audios" 
 
-# --------------- CONFIG --------------- #
+#------------------------------------------------------
+# Config
+#------------------------------------------------------
 sys.path.append(str(REPO_ROOT))
 from configuration.config_loader import config
 SAMP_RATE = config["eda"]["plot_converter"]["samp_rate"]

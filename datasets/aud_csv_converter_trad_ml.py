@@ -22,12 +22,16 @@ import librosa
 import numpy as np
 import pandas as pd
 
+#------------------------------------------------------
 # Paths: same level as this script
+#------------------------------------------------------
 SCRIPT_DIR = Path(__file__).resolve().parent #datasets/
 REPO_ROOT = SCRIPT_DIR.parent #root/
 AUDIO_FOLDER = SCRIPT_DIR / "audios"
 
+#------------------------------------------------------
 # Configuration
+#------------------------------------------------------
 sys.path.append(str(REPO_ROOT))
 from configuration.config_loader import config
 OUTPUT_FOLDER = SCRIPT_DIR / config["audio_converters"]["trad_ml_models"]["output_folder_str"]
@@ -36,6 +40,9 @@ INCLUDE_HNR = config["audio_converters"]["trad_ml_models"]["include_hnr"]
 FILE_TYPES = tuple(config["audio_converters"]["input_file_extensions"])
 OUTPUT_TYPE = config["audio_converters"]["output_file_extensions"]
 
+#------------------------------------------------------
+# Feature Extraction Functions
+#------------------------------------------------------
 def extract_features(y, sr, n_mfcc=N_MFCC, include_hnr=INCLUDE_HNR):
     """
     Extract features per frame using a single STFT computation.

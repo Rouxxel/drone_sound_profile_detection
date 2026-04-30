@@ -1,9 +1,11 @@
-# data_kaggle_download.py
-# Requires: pip install kagglehub and kaggle.json credentials with API key
-#
-# Downloads the Kaggle dataset, copies all .wav files from the nested structure
-# (e.g. DroneDetectionThesis/.../Data/Audio/) into datasets/audios/, then
-# deletes the downloaded DroneDetectionThesis folder.
+"""
+data_kaggle_download.py
+Requires: pip install kagglehub and kaggle.json credentials with API key
+
+Downloads the Kaggle dataset, copies all .wav files from the nested structure
+(e.g. DroneDetectionThesis/.../Data/Audio/) into datasets/audios/, then
+deletes the downloaded DroneDetectionThesis folder.
+"""
 
 import os
 import sys
@@ -12,7 +14,9 @@ import shutil
 import kagglehub
 from kagglehub.exceptions import KaggleApiHTTPError
 
-# --------------- CONFIG --------------- #
+#------------------------------------------------------
+# Configuration
+#------------------------------------------------------
 SCRIPT_DIR = Path(__file__).resolve().parent #datasets/
 REPO_ROOT = SCRIPT_DIR.parent #root/
 sys.path.append(str(REPO_ROOT))
