@@ -1,0 +1,120 @@
+Drone Sound Profile Detection
+Copyright 2026 Sebastian Russo
+
+This product is licensed under the Apache License, Version 2.0.
+See the LICENSE file in the project root for the full license text.
+
+This NOTICE file is provided in accordance with Section 4(d) of the
+Apache License 2.0. It does not modify the License.
+
+================================================================================
+Third-party software
+================================================================================
+
+This project depends on the following open-source libraries (see
+requirements.txt for pinned versions). Licenses below are the common
+upstream licenses as of packaging; always verify each package’s LICENSE
+file for the exact version you install.
+
+  NumPy
+    Copyright NumPy Developers
+    License: BSD-3-Clause
+
+  SciPy
+    Copyright SciPy Developers
+    License: BSD-3-Clause
+
+  pandas
+    Copyright The pandas Development Team / AQR Capital Management, LLC
+    License: BSD-3-Clause
+
+  scikit-learn
+    Copyright scikit-learn developers
+    License: BSD-3-Clause
+
+  sklearn-compat
+    License: BSD-3-Clause (compat helpers for scikit-learn)
+
+  joblib
+    Copyright Joblib developers
+    License: BSD-3-Clause
+
+  matplotlib
+    Copyright John D. Hunter / Matplotlib Development Team
+    License: PSF-based / Matplotlib license
+
+  librosa
+    Copyright librosa development team
+    License: ISC
+
+  audioread
+    Copyright audioread contributors
+    License: MIT
+
+  pydub
+    Copyright James Robert
+    License: MIT
+
+  ffmpeg-python
+    Copyright Karl Kroening and contributors
+    License: Apache-2.0
+    Note: also requires a system FFmpeg binary (LGPL/GPL depending on build).
+
+  TensorFlow
+    Copyright The TensorFlow Authors / Google LLC and contributors
+    License: Apache-2.0
+
+  Keras
+    Copyright Keras contributors / Google LLC and contributors
+    License: Apache-2.0
+
+  KerasTuner
+    Copyright The KerasTuner Authors
+    License: Apache-2.0
+
+  XGBoost
+    Copyright XGBoost contributors / Distributed (Deep) Machine Learning Community
+    License: Apache-2.0
+
+  albumentations
+    Copyright Albumentations Team
+    License: MIT
+
+  tqdm
+    Copyright tqdm developers
+    License: MPL-2.0 / MIT (dual; see package)
+
+  wandb (Weights & Biases)
+    Copyright Weights & Biases, Inc. and contributors
+    License: MIT
+
+  kagglehub
+    Copyright Kaggle Inc. / Google LLC and contributors
+    License: Apache-2.0
+
+================================================================================
+Third-party datasets and content
+================================================================================
+
+  Drone Detection Dataset (Kaggle)
+    Identifier: tacticularcancer/drone-detection-dataset
+    Used by: datasets/data_kaggle_download.py (via kagglehub)
+    Terms of use are governed by the dataset listing on Kaggle and any
+    license stated by the dataset author. Redistribution of the raw audio
+    may be restricted; this repository ships code to download it, not the
+    audio files themselves.
+
+  Example imagery under documentation/example_drones/
+    Photographs used for documentation/illustration only. Rights remain
+    with the respective image owners / sources; they are not licensed
+    under Apache-2.0 unless separately stated.
+
+================================================================================
+Project acknowledgments
+================================================================================
+
+This work builds on common audio ML practice (MFCC / Log-Mel features,
+CNN and classical ML classifiers) using the libraries listed above.
+Documentation and pipeline design target an embedded acoustic drone-
+detection use case (e.g. ESP32-S3 class hardware); hardware brand names
+are used for identification only and imply no affiliation or endorsement.
