@@ -131,7 +131,7 @@ def plot_duration_distribution(df: pd.DataFrame, out_dir: Path):
     fig, ax = plt.subplots(figsize=(8, 4))
     classes = df["class"].unique()
     data = [df.loc[df["class"] == c, "duration_sec"].values for c in sorted(classes)]
-    bp = ax.boxplot(data, tick_labels=sorted(classes), patch_artist=True)
+    bp = ax.boxplot(data, labels=sorted(classes), patch_artist=True)
     for i, patch in enumerate(bp["boxes"]):
         patch.set_facecolor(["#2ecc71", "#3498db", "#95a5a6"][i % 3])
     ax.set_title("Duration distribution per class (seconds)")
@@ -178,7 +178,7 @@ def plot_mfcc_mean_by_class(rows: list, out_dir: Path):
     for coef in range(n_features):
         ax = axes[coef]
         data_by_class = [[r["mean_mfcc"][coef] for r in rows if r["class"] == c] for c in classes]
-        bp = ax.boxplot(data_by_class, tick_labels=classes, patch_artist=True)
+        bp = ax.boxplot(data_by_class, labels=classes, patch_artist=True)
         for i, patch in enumerate(bp["boxes"]):
             patch.set_facecolor(["#2ecc71", "#3498db", "#95a5a6"][i % 3])
         ax.set_title(f"Feature {coef}")
