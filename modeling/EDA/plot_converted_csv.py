@@ -65,7 +65,7 @@ for csv_file in csv_files:
         print(f"Skipping {csv_file} -> plot already exists.")
         continue
 
-    print(f"Processing {csv_file}...")
+    print(f"---Processing {csv_file}...")
 
     # Load MFCC CSV
     mfcc_df = pd.read_csv(csv_path)
